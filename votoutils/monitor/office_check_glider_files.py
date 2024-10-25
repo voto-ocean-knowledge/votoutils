@@ -6,17 +6,40 @@ import subprocess
 from votoutils.utilities.utilities import mailer
 
 
-explained_missions = ((67, 15), (61, 63), (56, 27), (66, 31), (45, 58), (61, 48), (45, 37), (45, 54), (44, 48),
-                      (55, 16), (63, 40), (66, 45), (45, 74), (66, 50), (55, 81))
-skip_projects = ["1_Folder_Template", "2_Simulations", "3_SAT_Missions", "10_Oman_001", "8_KAMI-KZ_001",
-                 "11_Amundsen_Sea"]
+explained_missions = (
+    (67, 15),
+    (61, 63),
+    (56, 27),
+    (66, 31),
+    (45, 58),
+    (61, 48),
+    (45, 37),
+    (45, 54),
+    (44, 48),
+    (55, 16),
+    (63, 40),
+    (66, 45),
+    (45, 74),
+    (66, 50),
+    (55, 81),
+)
+skip_projects = [
+    "1_Folder_Template",
+    "2_Simulations",
+    "3_SAT_Missions",
+    "10_Oman_001",
+    "8_KAMI-KZ_001",
+    "11_Amundsen_Sea",
+]
 
 
 def erddap_download():
     datasets_url = "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/allDatasets.csv"
     df_erddap = pd.read_csv(datasets_url)
     df_erddap.drop(0, inplace=True)
-    complete_glider_missions = df_erddap[df_erddap.datasetID.str[:7] == "delayed"].datasetID
+    complete_glider_missions = df_erddap[
+        df_erddap.datasetID.str[:7] == "delayed"
+    ].datasetID
     erddap_missions = []
     for mission_str in complete_glider_missions:
         __, glider_str, mission_str = mission_str.split("_")
@@ -26,7 +49,12 @@ def erddap_download():
     return erddap_missions
 
 
-def good_mission(download_mission_path, processed_missions, explained=(), upload_script='upload.sh'):
+def good_mission(
+    download_mission_path,
+    processed_missions,
+    explained=(),
+    upload_script="upload.sh",
+):
     if "XXX" in str(download_mission_path):
         return
     parts = list(download_mission_path.parts)
@@ -74,7 +102,15 @@ def good_mission(download_mission_path, processed_missions, explained=(), upload
         mailer("mission not processed", msg)
 
         if pld_path.is_dir() and nav_path.is_dir():
-            subprocess.check_call(['/usr/bin/bash', upload_script, str(glider), str(mission), mission_path])
+            subprocess.check_call(
+                [
+                    "/usr/bin/bash",
+                    upload_script,
+                    str(glider),
+                    str(mission),
+                    mission_path,
+                ],
+            )
             msg = f"uploaded raw data for {pretty_mission}"
             mailer("new mission uploaded", msg)
 
@@ -106,7 +142,7 @@ def list_missions(to_skip=()):
     return all_mission_paths
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     mission_paths = list_missions(to_skip=skip_projects)
     processed_missions = erddap_download()
     for mission_dir in mission_paths:

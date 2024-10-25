@@ -16,4 +16,3 @@ Scripts are split into directories grouped by what they do:
 - **sailbuoy** process sailbuoy data
 - **upload** send data files between servers to e.g. the website and ERDDAP
 - **utilities** functions and dictionaries used by several of the other script groups
-

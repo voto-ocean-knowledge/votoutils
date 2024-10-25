@@ -21,4 +21,3 @@ echo if no gridded data file here, run recombine.py
 echo ""
 echo plots
 ls /data/plots/complete_mission/SEA$glider/M$mission
-

@@ -9,37 +9,48 @@ def create_csv(ds_file):
     timeseries = xr.open_dataset(ds_file)
     # Extract only core variables of interest. Append units to the variable names
     data = {}
-    for var in ('longitude', 'latitude', 'depth', 'temperature', 'conductivity', 'salinity'):
+    for var in (
+        "longitude",
+        "latitude",
+        "depth",
+        "temperature",
+        "conductivity",
+        "salinity",
+    ):
         name = f"{timeseries[var].attrs['standard_name']} ({timeseries[var].attrs['units']})"
         data[name] = timeseries[var].values
     # Create dataframe and add name for index
     df = pd.DataFrame(data, index=timeseries.time)
-    df.index.name = 'datetime'
+    df.index.name = "datetime"
 
     # Extract metadata from dataset. Change datatype to simple float for writing to text file
     meta = timeseries.attrs
-    meta['geospatial_lat_max'] = float(meta['geospatial_lat_max'])
-    meta['geospatial_lon_max'] = float(meta['geospatial_lon_max'])
-    meta['geospatial_lat_min'] = float(meta['geospatial_lat_min'])
-    meta['geospatial_lon_min'] = float(meta['geospatial_lon_min'])
+    meta["geospatial_lat_max"] = float(meta["geospatial_lat_max"])
+    meta["geospatial_lon_max"] = float(meta["geospatial_lon_max"])
+    meta["geospatial_lat_min"] = float(meta["geospatial_lat_min"])
+    meta["geospatial_lon_min"] = float(meta["geospatial_lon_min"])
 
     meta_ess = {}
 
-    essential_vars = ['deployment_id', 'acknowledgement', 'ctd',
-                      'glider_model',
-                      'glider_serial',
-                      'geospatial_lat_max',
-                      'geospatial_lat_min',
-                      'geospatial_lat_units',
-                      'geospatial_lon_max',
-                      'geospatial_lon_min',
-                      'geospatial_lon_units',
-                      'time_coverage_start',
-                      'time_coverage_end',
-                      'processing_level',
-                      'references',
-                      'sea_name',
-                      'wmo_id']
+    essential_vars = [
+        "deployment_id",
+        "acknowledgement",
+        "ctd",
+        "glider_model",
+        "glider_serial",
+        "geospatial_lat_max",
+        "geospatial_lat_min",
+        "geospatial_lat_units",
+        "geospatial_lon_max",
+        "geospatial_lon_min",
+        "geospatial_lon_units",
+        "time_coverage_start",
+        "time_coverage_end",
+        "processing_level",
+        "references",
+        "sea_name",
+        "wmo_id",
+    ]
 
     for key, val in meta.items():
         if key in essential_vars:
@@ -61,6 +72,6 @@ def create_csv(ds_file):
 
     # Write dataframe and metadata to matching files
     df.to_csv(output_dir / f"{file_name_base}.csv")
-    with open(output_dir / f"{file_name_base}.yml", 'a', encoding="utf-8") as file:
+    with open(output_dir / f"{file_name_base}.yml", "a", encoding="utf-8") as file:
         yaml.dump(meta_ess, file)
     return output_dir / file_name_base

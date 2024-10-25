@@ -8,29 +8,64 @@ import subprocess
 from votoutils.utilities.utilities import encode_times, set_best_dtype
 from votoutils.utilities import geocode
 from votoutils.upload.sync_functions import sync_script_dir
+
 _log = logging.getLogger(__name__)
 
 
 def metadata_extr(attrs, glider_attrs):
     ds_id = f"adcp_{glider_attrs['dataset_id'][8:]}"
     title = f"{glider_attrs['title']}_adcp"
-    extra_attrs = {'dataset_id': ds_id,
-                   'id': ds_id,
-                   'title': title,
-                   "processing_level": "L0 uncorrected ADCP data",
-                   "source": "relative velocity data from a glider mounted ADCP"
-                   }
+    extra_attrs = {
+        "dataset_id": ds_id,
+        "id": ds_id,
+        "title": title,
+        "processing_level": "L0 uncorrected ADCP data",
+        "source": "relative velocity data from a glider mounted ADCP",
+    }
     for key, val in extra_attrs.items():
         attrs[key] = val
-    transfer_attrs = ['AD2CP', 'acknowledgement', 'basin',
-                      'comment', 'contributor_name', 'contributor_role', 'creator_email', 'creator_name', 'creator_url',
-                      'date_created', 'date_issued', 'date_modified', 'deployment_end', 'deployment_id',
-                      'deployment_name', 'deployment_start', 'geospatial_lat_max', 'geospatial_lat_min',
-                      'geospatial_lat_units', 'geospatial_lon_max', 'geospatial_lon_min', 'geospatial_lon_units',
-                      'glider_instrument_name', 'glider_model', 'glider_name', 'glider_serial', 'institution',
-                      'license', 'project', 'project_url', 'publisher_email', 'publisher_name', 'publisher_url',
-                      'sea_name', 'summary', 'time_coverage_end', 'time_coverage_start', 'wmo_id',
-                      'disclaimer', 'platform']
+    transfer_attrs = [
+        "AD2CP",
+        "acknowledgement",
+        "basin",
+        "comment",
+        "contributor_name",
+        "contributor_role",
+        "creator_email",
+        "creator_name",
+        "creator_url",
+        "date_created",
+        "date_issued",
+        "date_modified",
+        "deployment_end",
+        "deployment_id",
+        "deployment_name",
+        "deployment_start",
+        "geospatial_lat_max",
+        "geospatial_lat_min",
+        "geospatial_lat_units",
+        "geospatial_lon_max",
+        "geospatial_lon_min",
+        "geospatial_lon_units",
+        "glider_instrument_name",
+        "glider_model",
+        "glider_name",
+        "glider_serial",
+        "institution",
+        "license",
+        "project",
+        "project_url",
+        "publisher_email",
+        "publisher_name",
+        "publisher_url",
+        "sea_name",
+        "summary",
+        "time_coverage_end",
+        "time_coverage_start",
+        "wmo_id",
+        "disclaimer",
+        "platform",
+    ]
     for key, val in glider_attrs.items():
         if key in transfer_attrs:
             attrs[key] = val
@@ -67,7 +102,10 @@ def write_3d_adcp(adcp, beam_attrs, output_path, good_dives):
     # rearrange the AD2CP data into 3D DataArrays. Using the native dtype of the data (32-bit float)
     dimensions = {"time": adcp.time, "cell": adcp.range, "beam": (1, 2, 3, 4)}
     for kind in ["Velocity", "Correlation", "Amplitude"]:
-        vel = np.empty((*adcp[f"{kind}Beam1"].values.shape, 4), dtype=type(adcp[f"{kind}Beam1"].values[0, 0]))
+        vel = np.empty(
+            (*adcp[f"{kind}Beam1"].values.shape, 4),
+            dtype=type(adcp[f"{kind}Beam1"].values[0, 0]),
+        )
         vel[:] = np.nan
         for beam in (1, 2, 3, 4):
             old_var = adcp[f"{kind}Beam{beam}"]
@@ -87,7 +125,7 @@ def write_3d_adcp(adcp, beam_attrs, output_path, good_dives):
     adcp = encode_times(adcp)
     if not output_path.exists():
         output_path.mkdir(parents=True)
-    adcp.to_netcdf(output_path / f"adcp.nc")
+    adcp.to_netcdf(output_path / "adcp.nc")
     adcp.close()
 
 
@@ -145,7 +183,10 @@ def proc_ad2cp_mission(glider, mission):
             var_fixed = var.rename({var.dims[1]: "range"})
             adcp = adcp.drop_vars(var_name)
             adcp[var_name] = var_fixed
-    adcp = adcp.reset_index(['Amplitude Range', 'Correlation Range', 'Velocity Range'], drop=True)
+    adcp = adcp.reset_index(
+        ["Amplitude Range", "Correlation Range", "Velocity Range"],
+        drop=True,
+    )
     # Keep only 3D variables in the ad2cp dataset (time, cell, beam). All others transferred to the glider dataset
     for_ts = []
     for var_name in list(adcp):
@@ -169,19 +210,27 @@ def proc_ad2cp_mission(glider, mission):
     shutil.move(str(proc_dir / "timeseries/mission_timeseries_with_adcp.nc"), nc)
     _log.info(f"processed ADCP for SEA{glider} M{mission}")
     subprocess.check_call(
-        ['/usr/bin/bash', sync_script_dir / "send_to_erddap_adcp.sh", str(glider), str(mission)])
+        [
+            "/usr/bin/bash",
+            sync_script_dir / "send_to_erddap_adcp.sh",
+            str(glider),
+            str(mission),
+        ],
+    )
     _log.info(f"sent SEA{glider} M{mission} to ERDDAP")
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Combine ADCP data with glider data')
-    parser.add_argument('glider', type=int, help='glider number, e.g. 70')
-    parser.add_argument('mission', type=int, help='Mission number, e.g. 23')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Combine ADCP data with glider data")
+    parser.add_argument("glider", type=int, help="glider number, e.g. 70")
+    parser.add_argument("mission", type=int, help="Mission number, e.g. 23")
     args = parser.parse_args()
-    logf = f'/data/log/complete_mission/adcp_SEA{str(args.glider)}_M{str(args.mission)}.log'
-    logging.basicConfig(filename=logf,
-                        filemode='w',
-                        format='%(asctime)s %(levelname)-8s %(message)s',
-                        level=logging.INFO,
-                        datefmt='%Y-%m-%d %H:%M:%S')
+    logf = f"/data/log/complete_mission/adcp_SEA{str(args.glider)}_M{str(args.mission)}.log"
+    logging.basicConfig(
+        filename=logf,
+        filemode="w",
+        format="%(asctime)s %(levelname)-8s %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
     proc_ad2cp_mission(args.glider, args.mission)
