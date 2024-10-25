@@ -4,11 +4,12 @@ import subprocess
 from votoutils.monitor.office_check_glider_files import list_missions, skip_projects
 from votoutils.utilities.utilities import mailer
 import logging
+
 _log = logging.getLogger(__name__)
 explained_issues = [(66, 45)]
 
 
-def proc(mission_dir, reprocess=False, upload_script='upload_adcp.sh'):
+def proc(mission_dir, reprocess=False, upload_script="upload_adcp.sh"):
     _log.info(f"clean ad2cp data for {mission_dir}")
     if "XXX" in str(mission_dir):
         return
@@ -30,11 +31,11 @@ def proc(mission_dir, reprocess=False, upload_script='upload_adcp.sh'):
     if not adcp_dir.exists():
         # TODO check if this is a mission with ADCP data or not
         print(f"no adcp data for {mission_dir}")
-        mailer(f"uploaded ADCP", f"no ADCP directory or files in {adcp_dir}")
+        mailer("uploaded ADCP", f"no ADCP directory or files in {adcp_dir}")
         return
     files = list(adcp_dir.glob(f"*{glider}*{mission}*000*.nc"))
     if not files:
-        mailer(f"uploaded ADCP", f"no ADCP files in {adcp_dir}")
+        mailer("uploaded ADCP", f"no ADCP files in {adcp_dir}")
         print(f"no files found in {adcp_dir}")
         return
     nc = files[0]
@@ -54,28 +55,40 @@ def proc(mission_dir, reprocess=False, upload_script='upload_adcp.sh'):
     config = xr.open_dataset(nc, group="Config").attrs
     data = xr.open_dataset(nc, group="Data/Average")
     # TODO decide on using bottom track data or not
-    #data_btrack = xr.open_dataset(nc, group="Data/AverageBT")
+    # data_btrack = xr.open_dataset(nc, group="Data/AverageBT")
     attrs = {}
-    skip_attrs = ["fileName", "fileName_description", "File_file_directory", "File_file_directory_description"]
+    skip_attrs = [
+        "fileName",
+        "fileName_description",
+        "File_file_directory",
+        "File_file_directory_description",
+    ]
     for i, (key, val) in enumerate(config.items()):
         if key in skip_attrs:
             continue
-        #"rawConfiguration" causes problems. HD5 doesn't allow attributes over 64k, which is 4096 chars, so split long strings up
+        # "rawConfiguration" causes problems. HD5 doesn't allow attributes over 64k, which is 4096 chars, so split long strings up
         if type(val) is str and len(val) > 4000:
             attrs[key] = val[:4000]
             attrs[f"{key}_continued"] = val[4000:]
             continue
         if key == "rawConfiguration":
             val = val[:4096]
-            #continue
+            # continue
         attrs[key] = val
     data.attrs = attrs
     print(f"writing {fout}")
+    data = data.drop_vars("MatlabTimeStamp")
     data.to_netcdf(fout)
     print("send to pipeline")
     subprocess.check_call(
-        ['/usr/bin/bash', upload_script,
-         str(glider), str(mission), str(fout)])
+        [
+            "/usr/bin/bash",
+            upload_script,
+            str(glider),
+            str(mission),
+            str(fout),
+        ],
+    )
     msg = f"uploaded ADCP data for {pretty_mission} SEA{glider} M{mission}"
     mailer("uploaded ADCP", msg)
     print("finished")
@@ -87,5 +100,5 @@ def main():
         proc(mission, reprocess=False)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

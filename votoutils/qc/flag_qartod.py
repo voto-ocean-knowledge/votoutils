@@ -1,4 +1,3 @@
-import xarray as xr
 import numpy as np
 import yaml
 import ioos_qc
@@ -19,96 +18,122 @@ def get_configs():
         "pressure": {
             "pressure": {
                 "qartod": {
-                    "gross_range_test": {"suspect_span": [0, 2000], "fail_span": [-2, 2000]},
+                    "gross_range_test": {
+                        "suspect_span": [0, 2000],
+                        "fail_span": [-2, 2000],
+                    },
                     "spike_test": {"suspect_threshold": 2.0, "fail_threshold": 6.0},
                     "location_test": {"bbox": [10, 50, 25, 70]},
-                }
-            }
+                },
+            },
         },
         "depth": {
             "depth": {
                 "qartod": {
-                    "gross_range_test": {"suspect_span": [0, 2000], "fail_span": [-2, 2000]},
+                    "gross_range_test": {
+                        "suspect_span": [0, 2000],
+                        "fail_span": [-2, 2000],
+                    },
                     "spike_test": {"suspect_threshold": 2.0, "fail_threshold": 6.0},
                     "location_test": {"bbox": [10, 50, 25, 70]},
-                }
-            }
+                },
+            },
         },
         "temperature": {
             "temperature": {
                 "qartod": {
-                    "gross_range_test": {"suspect_span": [0, 30], "fail_span": [-2.5, 40]},
+                    "gross_range_test": {
+                        "suspect_span": [0, 30],
+                        "fail_span": [-2.5, 40],
+                    },
                     "spike_test": {"suspect_threshold": 2.0, "fail_threshold": 6.0},
                     "location_test": {"bbox": [10, 50, 25, 70]},
-                }
-            }
+                },
+            },
         },
         "salinity": {
             "conductivity": {
                 "qartod": {
-                    "gross_range_test": {"suspect_span": [5, 42], "fail_span": [2, 45]}
-                }
+                    "gross_range_test": {"suspect_span": [5, 42], "fail_span": [2, 45]},
+                },
             },
             "salinity": {
                 "qartod": {
                     "gross_range_test": {"suspect_span": [5, 38], "fail_span": [2, 41]},
                     "spike_test": {"suspect_threshold": 0.3, "fail_threshold": 0.9},
                     "location_test": {"bbox": [10, 50, 25, 70]},
-                }
-            }
+                },
+            },
         },
         "conductivity": {
             "conductivity": {
                 "qartod": {
                     "gross_range_test": {"suspect_span": [5, 42], "fail_span": [2, 45]},
                     "location_test": {"bbox": [10, 50, 25, 70]},
-                }
+                },
             },
         },
         "oxygen_concentration": {
             "oxygen_concentration": {
                 "qartod": {
-                    "gross_range_test": {"suspect_span": [0, 350], "fail_span": [0, 500]},
+                    "gross_range_test": {
+                        "suspect_span": [0, 350],
+                        "fail_span": [0, 500],
+                    },
                     "spike_test": {"suspect_threshold": 10, "fail_threshold": 50},
                     "location_test": {"bbox": [10, 50, 25, 70]},
-                }
-            }
+                },
+            },
         },
-
         "chlorophyll": {
             "chlorophyll": {
                 "qartod": {
-                    "gross_range_test": {"suspect_span": [0, 15], "fail_span": [-1, 20]},
+                    "gross_range_test": {
+                        "suspect_span": [0, 15],
+                        "fail_span": [-1, 20],
+                    },
                     "spike_test": {"suspect_threshold": 1, "fail_threshold": 5},
                     "location_test": {"bbox": [10, 50, 25, 70]},
-                }
-            }
+                },
+            },
         },
         "longitude": {
             "latitude": {
                 "qartod": {
-                    "spike_test": {"suspect_threshold": 0.0001, "fail_threshold": 0.001},
+                    "spike_test": {
+                        "suspect_threshold": 0.0001,
+                        "fail_threshold": 0.001,
+                    },
                     "location_test": {"bbox": [10, 50, 25, 70]},
-                }
+                },
             },
             "longitude": {
                 "qartod": {
-                    "spike_test": {"suspect_threshold": 0.0001, "fail_threshold": 0.001},
-                }
-            }
+                    "spike_test": {
+                        "suspect_threshold": 0.0001,
+                        "fail_threshold": 0.001,
+                    },
+                },
+            },
         },
         "latitude": {
             "latitude": {
                 "qartod": {
-                    "spike_test": {"suspect_threshold": 0.0001, "fail_threshold": 0.001},
+                    "spike_test": {
+                        "suspect_threshold": 0.0001,
+                        "fail_threshold": 0.001,
+                    },
                     "location_test": {"bbox": [10, 50, 25, 70]},
-                }
+                },
             },
             "longitude": {
                 "qartod": {
-                    "spike_test": {"suspect_threshold": 0.0001, "fail_threshold": 0.001},
-                }
-            }
+                    "spike_test": {
+                        "suspect_threshold": 0.0001,
+                        "fail_threshold": 0.001,
+                    },
+                },
+            },
         },
     }
     return configs
@@ -127,15 +152,15 @@ def apply_ioos_flags(ds, config):
     c = Config(config)
     qc = XarrayStream(ds, lon="longitude", lat="latitude")
     runner = list(qc.run(c))
-    results = collect_results(runner, how='list')
+    results = collect_results(runner, how="list")
     agg = CollectedResult(
-        stream_id='',
-        package='qartod',
-        test='qc_rollup',
+        stream_id="",
+        package="qartod",
+        test="qc_rollup",
         function=aggregate,
         results=aggregate(results),
         tinp=qc.time(),
-        data=ds
+        data=ds,
     )
     flag_vals = agg.results
     call = c.calls
@@ -146,9 +171,11 @@ def apply_ioos_flags(ds, config):
 def flag_ioos(ds):
     configs = get_configs()
     # If the glider has a GPCTD, use this for the salinity config
-    if ds["conductivity"].attrs["units"] == 'S m-1':
-        configs["salinity"]["conductivity"]["qartod"]["gross_range_test"] = {"suspect_span": [0.6, 4.2],
-                                                                             "fail_span": [0.3, 4.5]}
+    if ds["conductivity"].attrs["units"] == "S m-1":
+        configs["salinity"]["conductivity"]["qartod"]["gross_range_test"] = {
+            "suspect_span": [0.6, 4.2],
+            "fail_span": [0.3, 4.5],
+        }
     configs = derive_configs(configs)
     for config_name, config in configs.items():
         if config_name not in list(ds.variables) + list(ds.coords):
@@ -159,27 +186,36 @@ def flag_ioos(ds):
         flagged_prop = 100 * sum(np.logical_and(flags > 1, flags < 9)) / len(flags)
         _log.info(f"Flagged {flagged_prop.round(3)} % of {config_name} as bad")
         # Apply flags and add comment
-        ioos_comment = f"Quality control flags from IOOS QC QARTOD https://github.com/ioos/ioos_qc Version: " \
-                       f"{ioos_qc.__version__}. Using config: {comment}."
-        if "temperature" in config.keys() or "salinity" in config.keys() or "conductivity" in config.keys():
-            ioos_comment = f"{ioos_comment}  Threshold values from EuroGOOS DATA-MEQ Working Group (2010)" \
-                           f" Recommendations for in-situ data Near Real Time Quality Control [Version 1.2]. EuroGOOS" \
-                           f", 23pp. DOI http://dx.doi.org/10.25607/OBP-214."
+        ioos_comment = (
+            f"Quality control flags from IOOS QC QARTOD https://github.com/ioos/ioos_qc Version: "
+            f"{ioos_qc.__version__}. Using config: {comment}."
+        )
+        if (
+            "temperature" in config.keys()
+            or "salinity" in config.keys()
+            or "conductivity" in config.keys()
+        ):
+            ioos_comment = (
+                f"{ioos_comment}  Threshold values from EuroGOOS DATA-MEQ Working Group (2010)"
+                f" Recommendations for in-situ data Near Real Time Quality Control [Version 1.2]. EuroGOOS"
+                f", 23pp. DOI http://dx.doi.org/10.25607/OBP-214."
+            )
 
         flag = ds[config_name].copy()
         flag.values = flags
         parent_attrs = flag.attrs
         flag.attrs = {
-            'ioos_qc_module': 'qartod',
+            "ioos_qc_module": "qartod",
             "quality_control_conventions": "IOOS QARTOD standard flags",
             "quality_control_set": 1,
             "valid_min": 1,
             "valid_max": 9,
             "flag_values": [1, 2, 3, 4, 9],
-            'flag_meanings': 'GOOD, UNKNOWN, SUSPECT, FAIL, MISSING',
+            "flag_meanings": "GOOD, UNKNOWN, SUSPECT, FAIL, MISSING",
             "long_name": f"quality control flags for {parent_attrs['long_name']}",
             "standard_name": f"{parent_attrs['standard_name']}_flag",
-            "comment": ioos_comment}
+            "comment": ioos_comment,
+        }
         ds[f"{config_name}_qc"] = flag
     return ds
 
@@ -187,6 +223,7 @@ def flag_ioos(ds):
 def flag_oxygen(ds):
     oxy_meta_str = ds.oxygen
     import ast
+
     oxy_meta = ast.literal_eval(oxy_meta_str)
     cal_date = datetime.date.fromisoformat(oxy_meta["calibration_date"])
     if "coda" in oxy_meta["make_model"] and cal_date < datetime.date(2022, 12, 30):
@@ -196,8 +233,10 @@ def flag_oxygen(ds):
         sus_flags = np.ones(len(pre_flags), dtype=int) * 3
         ds["oxygen_concentration_qc"].values = np.maximum(pre_flags, sus_flags)
         original_comment = ds["oxygen_concentration_qc"].attrs["comment"]
-        bad_oxy_comment = "Oxygen optode improperly calibrated during this deployment. All flags set to minimum value" \
-                          " of 3 (SUSPECT). Data may be recoverable. "
+        bad_oxy_comment = (
+            "Oxygen optode improperly calibrated during this deployment. All flags set to minimum value"
+            " of 3 (SUSPECT). Data may be recoverable. "
+        )
         comment = f"{bad_oxy_comment} {original_comment}"
         ds["oxygen_concentration_qc"].attrs["comment"] = comment
         ds["oxygen_concentration_qc"].attrs["quality_control_set"] = 1
@@ -222,7 +261,9 @@ def flag_pilot(ds):
             deployment["qc"][ct_var] = deployment["qc"]["conductivity"]
     for variable in deployment["qc"]:
         if f"{variable}_qc" not in list(ds):
-            _log.warning(f"{variable} in yaml qc section, but has no qc from IOOS. Applying minimum qc")
+            _log.warning(
+                f"{variable} in yaml qc section, but has no qc from IOOS. Applying minimum qc",
+            )
             flag = ds[variable].copy()
             flag.values[:] = 2
             parent_attrs = flag.attrs
@@ -232,10 +273,11 @@ def flag_pilot(ds):
                 "valid_min": 1,
                 "valid_max": 9,
                 "flag_values": [1, 2, 3, 4, 9],
-                'flag_meanings': 'GOOD, UNKNOWN, SUSPECT, FAIL, MISSING',
+                "flag_meanings": "GOOD, UNKNOWN, SUSPECT, FAIL, MISSING",
                 "long_name": f"quality control flags for {parent_attrs['long_name']}",
                 "standard_name": f"{parent_attrs['standard_name']}_flag",
-                "comment": "no automated QC applied"}
+                "comment": "no automated QC applied",
+            }
             ds[f"{variable}_qc"] = flag
         pilot_qc = deployment["qc"][variable]
         var_qc = ds[f"{variable}_qc"]
@@ -253,7 +295,7 @@ def flag_pilot(ds):
         else:
             end = np.nanmax(ds.time)
         var_qc_timesub = var_qc.values[np.logical_and(ds.time >= start, ds.time <= end)]
-        var_qc_timesub[var_qc_timesub < pilot_qc['value']] = pilot_qc['value']
+        var_qc_timesub[var_qc_timesub < pilot_qc["value"]] = pilot_qc["value"]
         var_qc.values[np.logical_and(ds.time >= start, ds.time <= end)] = var_qc_timesub
         original_comment = var_qc.attrs["comment"]
         pilot_comment = pilot_qc["comment"]
@@ -267,10 +309,14 @@ def flagger(ds):
     ds = flag_ioos(ds)
     ds = flag_oxygen(ds)
     ds = flag_pilot(ds)
-    ds.attrs["processing_level"] = f"L1. Quality control flags from IOOS QC QARTOD https://github.com/ioos/ioos_qc " \
-                                   f"Version: {ioos_qc.__version__} "
-    ds.attrs["disclaimer"] = "Data, products and services from VOTO are provided 'as is' without any warranty as" \
-                             " to fitness for a particular purpose."
+    ds.attrs["processing_level"] = (
+        f"L1. Quality control flags from IOOS QC QARTOD https://github.com/ioos/ioos_qc "
+        f"Version: {ioos_qc.__version__} "
+    )
+    ds.attrs["disclaimer"] = (
+        "Data, products and services from VOTO are provided 'as is' without any warranty as"
+        " to fitness for a particular purpose."
+    )
     return ds
 
 

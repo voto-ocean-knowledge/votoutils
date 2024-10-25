@@ -24,17 +24,13 @@ def adcp_proc_check(download_mission_path):
             print(f"multiple .adcp files in {pretty_mission}")
             return
         adcp_file = all_adcp_files[0]
-    except:
+    except IndexError:
         print(f"no .ad2cp file found in {pretty_mission}")
         return
     adcp_parts = list(adcp_file.parts)
     adcp_parts[4] = "4_Processed"
     ad2cp_path_clean = Path(*adcp_parts[:-1])
     pretty_mission_proc = str(ad2cp_path_clean)[85:]
-    try:
-        nc_path = list(ad2cp_path_clean.glob("*.nc"))[0]
-    except:
+    if len(list(ad2cp_path_clean.glob("*.nc"))) < 1:
         print(f"no nc found in {pretty_mission_proc}")
-
     return
-

@@ -7,34 +7,40 @@ import shutil
 import gzip
 
 _log = logging.getLogger(__name__)
-logging.basicConfig(filename='/data/log/synthetic_nrt_from_complete.log',
-                    filemode='a',
-                    format='%(asctime)s %(levelname)-8s %(message)s',
-                    level=logging.INFO,
-                    datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(
+    filename="/data/log/synthetic_nrt_from_complete.log",
+    filemode="a",
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    level=logging.INFO,
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 def match_input_files(gli_infiles, pld_infiles):
     gli_nums = []
     for fname in gli_infiles:
-        parts = fname.name.split('.')
+        parts = fname.name.split(".")
         try:
             gli_nums.append(int(parts[-1]))
         except ValueError:
             try:
                 gli_nums.append(int(parts[-2]))
             except ValueError:
-                raise ValueError("Unexpected gli file filename found in input. Aborting")
+                raise ValueError(
+                    "Unexpected gli file filename found in input. Aborting",
+                )
     pld_nums = []
     for fname in pld_infiles:
-        parts = fname.name.split('.')
+        parts = fname.name.split(".")
         try:
             pld_nums.append(int(parts[-1]))
         except ValueError:
             try:
                 pld_nums.append(int(parts[-2]))
             except ValueError:
-                raise ValueError("Unexpected pld file filename found in input. Aborting")
+                raise ValueError(
+                    "Unexpected pld file filename found in input. Aborting",
+                )
     good_cycles = set(pld_nums) & set(gli_nums)
     good_gli_files = []
     good_pld_files = []
@@ -57,23 +63,31 @@ def fix_seconds(first_timestamp):
 
 
 def set_first_timestamp(df):
-    first_time = df['time'][0]
+    first_time = df["time"][0]
     add_seconds = fix_seconds(first_time)
     if add_seconds == 0:
         return df
-    return df.filter(pl.col('time') >= first_time + datetime.timedelta(seconds=add_seconds))
+    return df.filter(
+        pl.col("time") >= first_time + datetime.timedelta(seconds=add_seconds),
+    )
 
 
 def subsample_pld_file(pldfile):
     _log.debug(f"proc {pldfile}")
     fn = pldfile.name
-    glider, mission, _ = fn.split('.', maxsplit=2)
+    glider, mission, _ = fn.split(".", maxsplit=2)
     glider = int(glider[3:])
-    df = pl.read_csv(pldfile, separator=';', truncate_ragged_lines=True)
-    df = df.with_columns((pl.col("PLD_REALTIMECLOCK").str.slice(0, 18) + '1').alias("time_seconds"))
-    df = df.with_columns(pl.col("time_seconds").str.strptime(pl.Datetime, format="%d/%m/%Y %H:%M:%S").alias("time"))
-    df = df.unique(subset='time_seconds', keep='first')
-    df = df.sort('time')
+    df = pl.read_csv(pldfile, separator=";", truncate_ragged_lines=True)
+    df = df.with_columns(
+        (pl.col("PLD_REALTIMECLOCK").str.slice(0, 18) + "1").alias("time_seconds"),
+    )
+    df = df.with_columns(
+        pl.col("time_seconds")
+        .str.strptime(pl.Datetime, format="%d/%m/%Y %H:%M:%S")
+        .alias("time"),
+    )
+    df = df.unique(subset="time_seconds", keep="first")
+    df = df.sort("time")
     if df.is_empty():
         return
     df = set_first_timestamp(df)
@@ -82,26 +96,43 @@ def subsample_pld_file(pldfile):
     df_out = df.upsample(time_column="time", every="30s").fill_null(strategy="forward")
     if df_out.is_empty():
         return
-    df_out = df_out.unique(subset='time_seconds', keep='first').sort('time').drop(['time', 'time_seconds'])
-    fn_out = fn.replace('raw', 'sub').replace('.gz', '')
-    outfile = Path(f"/data/data_raw/nrt/SEA0{str(glider).zfill(2)}/{str(mission).zfill(6)}/C-Csv/") / fn_out
-    df_out.write_csv(outfile, separator=';')
-    with open(outfile, 'rb') as f_in, gzip.open(str(outfile) + '.gz', 'wb') as f_out:
+    df_out = (
+        df_out.unique(subset="time_seconds", keep="first")
+        .sort("time")
+        .drop(["time", "time_seconds"])
+    )
+    fn_out = fn.replace("raw", "sub").replace(".gz", "")
+    outfile = (
+        Path(
+            f"/data/data_raw/nrt/SEA0{str(glider).zfill(2)}/{str(mission).zfill(6)}/C-Csv/",
+        )
+        / fn_out
+    )
+    df_out.write_csv(outfile, separator=";")
+    with open(outfile, "rb") as f_in, gzip.open(str(outfile) + ".gz", "wb") as f_out:
         f_out.writelines(f_in)
     os.unlink(outfile)
 
 
 def synthetic_nrt_files_from_complete(glider, mission, dive_stride=5):
-    nrt_path = Path(f"/data/data_raw/nrt/SEA0{str(glider).zfill(2)}/{str(mission).zfill(6)}/C-Csv/")
+    nrt_path = Path(
+        f"/data/data_raw/nrt/SEA0{str(glider).zfill(2)}/{str(mission).zfill(6)}/C-Csv/",
+    )
     delayed_path = Path(f"/data/data_raw/complete_mission/SEA{glider}/M{mission}")
     if not nrt_path.exists():
         nrt_path.mkdir(parents=True)
-    in_files_gli = sorted(delayed_path.glob('*gli.sub*.gz'), key=lambda path: int(path.stem.split(".")[4]))
-    in_files_pld = sorted(delayed_path.glob('*pld1.raw*.gz'), key=lambda path: int(path.stem.split(".")[4]))
+    in_files_gli = sorted(
+        delayed_path.glob("*gli.sub*.gz"),
+        key=lambda path: int(path.stem.split(".")[4]),
+    )
+    in_files_pld = sorted(
+        delayed_path.glob("*pld1.raw*.gz"),
+        key=lambda path: int(path.stem.split(".")[4]),
+    )
     in_files_gli, in_files_pld = match_input_files(in_files_gli, in_files_pld)
 
-    with open(nrt_path / "synthetic_nrt_data.txt", 'w') as f_out:
-        f_out.write('synthetic')
+    with open(nrt_path / "synthetic_nrt_data.txt", "w") as f_out:
+        f_out.write("synthetic")
 
     for glifile in in_files_gli[::dive_stride]:
         outfile = str(nrt_path / glifile.name)
@@ -120,18 +151,24 @@ def all_nrt_from_complete(reprocess=True):
         for mission_path in mission_paths:
             glider = int(glider_path.parts[-1][3:])
             mission = int(mission_path.parts[-1][1:])
-            nrt_path = Path(f"/data/data_raw/nrt/SEA0{str(glider).zfill(2)}/{str(mission).zfill(6)}/C-Csv/")
+            nrt_path = Path(
+                f"/data/data_raw/nrt/SEA0{str(glider).zfill(2)}/{str(mission).zfill(6)}/C-Csv/",
+            )
             syn_marker_path = nrt_path / "synthetic_nrt_data.txt"
             if nrt_path.exists() and not syn_marker_path.exists():
                 _log.debug(f"nrt path {nrt_path} is non-synthetic. skipping")
                 continue
             try:
-                glidermissions.append((int(glider_path.parts[-1][3:]), int(mission_path.parts[-1][1:])))
-            except:
+                glidermissions.append(
+                    (int(glider_path.parts[-1][3:]), int(mission_path.parts[-1][1:])),
+                )
+            except ValueError:
                 _log.warning(f"Could not process {mission_path}")
     _log.info(f"will process {len(glidermissions)} missions")
     for i, (glider, mission) in enumerate(glidermissions):
-        nrt_path = Path(f"/data/data_raw/nrt/SEA0{str(glider).zfill(2)}/{str(mission).zfill(6)}/C-Csv/")
+        nrt_path = Path(
+            f"/data/data_raw/nrt/SEA0{str(glider).zfill(2)}/{str(mission).zfill(6)}/C-Csv/",
+        )
         if nrt_path.exists() and not reprocess:
             _log.info(f"SEA{glider} M{mission} already exists. Skipping")
             continue
@@ -141,6 +178,6 @@ def all_nrt_from_complete(reprocess=True):
     _log.info("Complete synthetic nrt from complete")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # synthetic_nrt_files_from_complete(44, 85)
     all_nrt_from_complete()

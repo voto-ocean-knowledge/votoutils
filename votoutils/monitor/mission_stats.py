@@ -6,9 +6,11 @@ from votoutils.utilities import utilities
 
 def compute_glider_stats():
     try:
-        df_stats = pd.read_csv('/home/pipeline/stats.csv')
-    except:
-        df_stats = pd.DataFrame({"glider": [], "mission": [], "ctd_period": [], "oxy_period": []})
+        df_stats = pd.read_csv("/home/pipeline/stats.csv")
+    except FileNotFoundError:
+        df_stats = pd.DataFrame(
+            {"glider": [], "mission": [], "ctd_period": [], "oxy_period": []},
+        )
 
     glider_paths = list(Path("/data/data_raw/complete_mission").glob("SEA*"))
     for glider_path in glider_paths:
@@ -21,13 +23,15 @@ def compute_glider_stats():
                 continue
             try:
                 sampling_periods = utilities.sensor_sampling_period(glider, mission)
-                new_row = pd.DataFrame(sampling_periods,
-                                       index=[len(df_stats)])
+                new_row = pd.DataFrame(
+                    sampling_periods,
+                    index=[len(df_stats)],
+                )
                 df_stats = pd.concat((df_stats, new_row))
-            except:
+            except IndexError:
                 print(f"fail for SEA{glider} M{mission}")
-        df_stats.to_csv('/home/pipeline/stats.csv', index=False)
+        df_stats.to_csv("/home/pipeline/stats.csv", index=False)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     compute_glider_stats()

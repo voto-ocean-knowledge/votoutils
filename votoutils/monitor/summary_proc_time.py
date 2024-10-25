@@ -5,7 +5,7 @@ df = pd.read_csv("/home/pipeline/reprocess.csv", parse_dates=["proc_time"])
 
 dts = []
 for i, row in df.iterrows():
-    dur =row.duration
+    dur = row.duration
     if "day" in dur:
         dur = dur.split(" ")[-1]
 

@@ -57,5 +57,5 @@ ignore = [
   "tests",
   "tests/*",
   "pipeline",
-  "pipeline/*"
+  "pipeline/*",
 ]
