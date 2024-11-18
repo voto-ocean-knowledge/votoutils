@@ -41,7 +41,7 @@ def clean_nrt_bad_files(in_dir):
             for col_name in out.columns:
                 if "time" not in col_name.lower() or col_name == "NOC_SAMPLE_TIME":
                     out = out.with_columns(pl.col(col_name).cast(pl.Float64))
-        except pl.exceptions.ComputeError:
+        except (pl.exceptions.ComputeError, pl.exceptions.InvalidOperationError):
             _log.info(f"Error reading {fn}. Cutting the last line from this file")
             subprocess.run(["sed", "-i", "$ d", str(file_path)])
     _log.info(f"Complete cleanup of nrt files from {in_dir}")

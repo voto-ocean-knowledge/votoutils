@@ -15,3 +15,4 @@ pynmea2
 pyyaml
 seabird
 xarray
+pyarrow
