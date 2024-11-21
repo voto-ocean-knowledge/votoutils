@@ -5,6 +5,7 @@ import requests
 import logging
 import datetime
 import time
+from votoutils.alerts.read_mail import read_email_from_gmail
 
 script_dir = Path(__file__).parent.parent.parent.absolute()
 format_basic = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
@@ -223,8 +224,22 @@ def check_all_gliders(base_dir):
         _log.debug(f'complete SEA{fill(glider_num)}')
 
 
+def mail_alert(subject_line):
+    if subject_line[:3] == 'FW:':
+        subject_line = subject_line[4:]
+    parts = subject_line.strip(' ').split(' ')
+    ddict = {'glider': int(parts[0][4:-1]),
+             'mission': int(parts[1][1:]),
+             'cycle': int(parts[3][1:]),
+             'security_level': int(parts[-1][6:-1])}
+    alarm(ddict)
+
+
 if __name__ == '__main__':
     _log.info("START CHECK")
+    _log.info("start email check")
+    read_email_from_gmail(mail_alert)
+    _log.info("complete email check")
     base_data_dir = Path(f"/data/data_raw/nrt/")
     check_all_gliders(base_data_dir)
     _log.info("COMPLETE CHECK")
