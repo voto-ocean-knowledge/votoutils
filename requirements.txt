@@ -16,3 +16,4 @@ pyyaml
 seabird
 xarray
 pyarrow
+requests
