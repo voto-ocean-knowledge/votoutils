@@ -8,6 +8,7 @@ import time
 from votoutils.alerts.read_mail import read_email_from_gmail
 
 script_dir = Path(__file__).parent.parent.parent.absolute()
+
 format_basic = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 format_alarm = logging.Formatter('%(asctime)s,%(message)s', datefmt="%Y-%m-%d %H:%M:%S")
 
@@ -29,7 +30,7 @@ _log = setup_logger('first_logger', '/data/log/alarms.log')
 # second file logger
 alarm_log = setup_logger('second_logger', '/data/log/alarms_sent.log', formatter=format_alarm)
 
-alarms_json = '/data/log/alarms.json'
+alarms_json = Path('/data/log/alarms.json')
 with open(script_dir / 'alarm_secrets.json', 'r') as secrets_file:
     secrets_dict = json.load(secrets_file)
 pilot_phone = secrets_dict['recipient']
@@ -63,15 +64,16 @@ def parse_mrs(comm_log_file):
 
 
 def get_last_check_time(glider_num):
+    glider = str(glider_num)
     default_time = pd.to_datetime('1970-01-01')
-    if not Path('alarms.json').exists():
+    if not alarms_json.exists():
         return default_time
-    with open('alarms.json', 'r') as f:
+    with open(alarms_json, 'r') as f:
         glider_dict = json.load(f)
-    if glider_num not in glider_dict.keys():
+    if glider not in glider_dict.keys():
         return default_time
     try:
-        prev_last_line_dict = glider_dict[glider_num]
+        prev_last_line_dict = glider_dict[glider]
         last_check = pd.to_datetime(prev_last_line_dict['datetime'])
     except:
         return default_time
@@ -79,7 +81,7 @@ def get_last_check_time(glider_num):
 
 
 def update_glider_dict(glider_num, last_line_dict):
-    if Path(alarms_json).exists():
+    if alarms_json.exists():
         with open(alarms_json, 'r') as f:
             glider_dict = json.load(f)
     else:
@@ -87,8 +89,8 @@ def update_glider_dict(glider_num, last_line_dict):
     last_line_dict['datetime'] = str(last_line_dict['datetime'])
 
     glider_dict[glider_num] = last_line_dict
-    with open('alarms.json', 'w') as f:
-        json.dump(glider_dict, f)
+    with open(alarms_json, 'w') as f:
+        json.dump(glider_dict, f, indent=4)
 
 
 def elks_text(ddict, recipient=pilot_phone, user='pilot'):
@@ -168,7 +170,7 @@ def contact_supervisor(ddict):
 def alarm(ddict):
     glider = ddict['glider']
     if not ddict['security_level']:
-        _log.info(f"SEA{str(glider).zfill(3)} M{ddict['mission']} cycle {ddict['cycle']} alarm cleared")
+        _log.info(f"Alarm cleared SEA{str(glider).zfill(3)} M{ddict['mission']} cycle {ddict['cycle']}")
         return
     df_action = find_previous_action(ddict)
     if df_action.empty:
@@ -181,7 +183,7 @@ def alarm(ddict):
 
     if 'pilot' in previous_action:
         _log.warning(f"Will we escalate? {df_action.iloc[-1].to_dict()['datetime']} ")
-        if df_action.iloc[-1].to_dict()['datetime'] < datetime.datetime.now() - datetime.timedelta(seconds=30):
+        if df_action.iloc[-1].to_dict()['datetime'] < datetime.datetime.now() - datetime.timedelta(minutes=3):
             contact_supervisor(ddict)
     return
 
@@ -198,13 +200,18 @@ def check_glider(base_dir, glider_num):
         return
 
     last_check = get_last_check_time(glider_num)
-    df = df[df.datetime > last_check]
+    if df.iloc[-1]['datetime'] < datetime.datetime.now() - datetime.timedelta(hours=6):
+        _log.info(f"Stale log from SEA{fill(glider_num)}")
+        return
+    df = df[df.datetime > last_check - datetime.timedelta(minutes=30)]
     if df.empty:
-        _log.debug(f'no new lines from SEA{str(glider_num).zfill(3)}')
+        _log.info(f'no new lines from SEA{fill(glider_num)}')
         return
     last_line_dict = df.iloc[-1].to_dict()
 
-    if not df[df.alarm].empty:
+    if df[df.alarm].empty:
+        _log.info(f"No alarms for SEA{fill(glider_num)}")
+    else:
         last_line_dict['glider'] = glider_num
         alarm(last_line_dict)
 
@@ -236,11 +243,10 @@ def mail_alert(subject_line):
 
 
 if __name__ == '__main__':
-    _log.info("START CHECK")
+    _log.info("******** START CHECK **********")
     _log.info("start email check")
     read_email_from_gmail(mail_alert)
     _log.info("complete email check")
-    base_data_dir = Path(f"/data/data_raw/nrt/")
+    base_data_dir = Path(secrets_dict['base_data_dir'])
     check_all_gliders(base_data_dir)
-    _log.info("COMPLETE CHECK")
-
+    _log.info("******** COMPLETE CHECK *********")
