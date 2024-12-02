@@ -4,7 +4,6 @@ from pathlib import Path
 import requests
 import logging
 import datetime
-import time
 from votoutils.alerts.read_mail import read_email_from_gmail
 
 script_dir = Path(__file__).parent.parent.parent.absolute()
@@ -33,8 +32,12 @@ alarm_log = setup_logger('second_logger', '/data/log/alarms_sent.log', formatter
 alarms_json = Path('/data/log/alarms.json')
 with open(script_dir / 'alarm_secrets.json', 'r') as secrets_file:
     secrets_dict = json.load(secrets_file)
-pilot_phone = secrets_dict['recipient']
-supervisor_phone = secrets_dict['recipient']
+
+schedule = pd.read_csv('/data/log/schedule.csv', parse_dates=True, index_col=0, sep=';', dtype=str)
+now = datetime.datetime.now()
+row = schedule[schedule.index < now].iloc[-1]
+pilot_phone = row['pilot']
+supervisor_phone = row['supervisor']
 
 
 def fill(glider_num):
@@ -93,16 +96,18 @@ def update_glider_dict(glider_num, last_line_dict):
         json.dump(glider_dict, f, indent=4)
 
 
-def elks_text(ddict, recipient=pilot_phone, user='pilot'):
+def elks_text(ddict, recipient=pilot_phone, user='pilot', fake=True):
     message = f"SEA{fill(ddict['glider'])} M{ddict['mission']} cycle {ddict['cycle']} alarm code {ddict['security_level']}"
+    data = {
+        'from': 'GliderAlert',
+        'to': recipient,
+        'message': message,
+    }
+    if fake:
+        data['dryrun'] = 'yes'
     response = requests.post('https://api.46elks.com/a1/sms',
                              auth=(secrets_dict['elks_username'], secrets_dict['elks_password']),
-                             data={
-                                 'from': 'GliderAlert',
-                                 'to': recipient,
-                                 'message': message,
-                                 'dryrun': 'yes',
-                             }
+                             data=data
                              )
     _log.warning(f"ELKS SEND: {response.text}")
     if response.status_code == 200:
@@ -111,27 +116,26 @@ def elks_text(ddict, recipient=pilot_phone, user='pilot'):
         _log.error(f"failed elks text {response.text}")
 
 
-def elks_call(ddict, recipient=pilot_phone, user='pilot'):
-    response = requests.post('https://api.46elks.com/a1/sms',
-                             auth=(secrets_dict['elks_username'], secrets_dict['elks_password']),
-                             data={
-                                 'from': 'GliderAlert',
-                                 'to': recipient,
-                                 'message': "this is a fake call",
-                                 'dryrun': 'yes',
-                             }
-                             )
-
-    """
-    response = requests.post('https://api.46elks.com/a1/calls',
-                             auth=(secrets_dict['elks_username'], secrets_dict['elks_password']),
-                             data={
-                                 'from': secrets_dict['elks_phone'],
-                                 'to': recipient,
-                                 'voice_start': '{"play":"https://46elks.com/static/sound/make-call.mp3"}'
-                             }
-                             )
-    """
+def elks_call(ddict, recipient=pilot_phone, user='pilot', fake=True):
+    if fake:
+        response = requests.post('https://api.46elks.com/a1/sms',
+                                 auth=(secrets_dict['elks_username'], secrets_dict['elks_password']),
+                                 data={
+                                     'from': 'GliderAlert',
+                                     'to': recipient,
+                                     'message': "this is a fake call",
+                                     'dryrun': 'yes',
+                                 }
+                                 )
+    else:
+        response = requests.post('https://api.46elks.com/a1/calls',
+                                 auth=(secrets_dict['elks_username'], secrets_dict['elks_password']),
+                                 data={
+                                     'from': secrets_dict['elks_phone'],
+                                     'to': recipient,
+                                     'voice_start': '{"play":"https://46elks.com/static/sound/make-call.mp3"}'
+                                 }
+                                 )
     _log.warning(f"ELKS CALL: {response.text}")
     if response.status_code == 200:
         alarm_log.info(f"{ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},call_{user}")
@@ -153,17 +157,15 @@ def find_previous_action(ddict):
     return df
 
 
-def contact_pilot(ddict):
+def contact_pilot(ddict, fake=True):
     _log.warning(f"PILOT")
-    elks_text(ddict)
-    time.sleep(1)
-    elks_call(ddict)
+    elks_text(ddict, fake=fake)
+    elks_call(ddict, fake=fake)
 
 
 def contact_supervisor(ddict):
     _log.warning(f"ESCALATE")
     elks_text(ddict, recipient=supervisor_phone, user='supervisor')
-    time.sleep(1)
     elks_call(ddict, recipient=supervisor_phone, user='supervisor')
 
 
