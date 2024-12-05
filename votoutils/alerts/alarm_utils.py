@@ -7,7 +7,6 @@ import datetime
 import email
 import imaplib
 _log = logging.getLogger(name='core_log')
-alarm_log = logging.getLogger(name='platform_alarm')
 
 script_dir = Path(__file__).parent.parent.parent.absolute()
 
@@ -67,7 +66,9 @@ def parse_mrs(comm_log_file):
 
 
 def elks_text(ddict, recipient=pilot_phone, user='pilot', fake=True):
-    message = f"SEA{ddict['platform_id']} M{ddict['mission']} cycle {ddict['cycle']} alarm code {ddict['security_level']}"
+    alarm_log = logging.getLogger(name=ddict['platform_id'])
+
+    message = f"{ddict['platform_id']} M{ddict['mission']} cycle {ddict['cycle']} alarm code {ddict['security_level']}"
     data = {
         'from': 'VOTOalert',
         'to': recipient,
@@ -87,6 +88,7 @@ def elks_text(ddict, recipient=pilot_phone, user='pilot', fake=True):
 
 
 def elks_call(ddict, recipient=pilot_phone, user='pilot', fake=True, timeout_seconds=60):
+    alarm_log = logging.getLogger(name=ddict['platform_id'])
     if fake:
         response = requests.post('https://api.46elks.com/a1/sms',
                                  auth=(secrets_dict['elks_username'], secrets_dict['elks_password']),

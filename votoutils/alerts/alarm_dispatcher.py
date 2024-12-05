@@ -6,7 +6,7 @@ import logging
 from votoutils.alerts.alarm_utils import setup_logger, format_alarm, secrets_dict, contact_pilot, contact_supervisor, \
     find_previous_action, parse_mrs, mail_alarms_json, parse_mail_alarms
 
-_log = setup_logger('core_log', '/data/log/alarms.log', level=logging.INFO)
+_log = setup_logger('core_log', '/data/log/alarms.log', level=logging.DEBUG)
 
 
 class Dispatcher:
@@ -24,7 +24,7 @@ class Dispatcher:
         self.df_mrs = pd.DataFrame()
         self.alarm_dict = {}
         self.dummy_calls = True
-        setup_logger('platform_alarm', self.alarm_log, formatter=format_alarm, level=logging.INFO)
+        setup_logger(platform_id, self.alarm_log, formatter=format_alarm, level=logging.INFO)
 
     def load_alarm_log(self):
         if Path(self.alarm_log).exists():
@@ -86,7 +86,8 @@ class Dispatcher:
             self.alarm_dict = email_dict
             return True
         if self.alarm_dict['mission'] >= email_dict['mission'] and self.alarm_dict['cycle'] >= email_dict['cycle']:
-            _log.debug("stale email. Skipping")
+            _log.debug(f"stale email. Skipping. mission: {self.alarm_dict['mission']} vs {email_dict['mission']}, "
+                       f"cycle  {self.alarm_dict['cycle']} vs {email_dict['cycle']}")
             return False
 
         self.alarm_dict = email_dict
