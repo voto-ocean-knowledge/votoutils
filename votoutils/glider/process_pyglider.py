@@ -6,6 +6,7 @@ import yaml
 import numpy as np
 import polars as pl
 import xarray as xr
+from votoutils.glider.pre_process import clean_infiles
 from votoutils.utilities.geocode import get_seas_merged_nav_nc
 from votoutils.glider.post_process_dataset import post_process
 from votoutils.utilities.utilities import encode_times, set_best_dtype
@@ -107,6 +108,7 @@ def proc_pyglider_l0(glider, mission, kind, input_dir, output_dir):
     deploymentyaml = f"/data/tmp/deployment_yml/SEA{str(glider)}_M{str(mission)}.yml"
 
     safe_delete([rawncdir, l0tsdir, profiledir, griddir])
+    clean_infiles(input_dir)
     seaexplorer.raw_to_rawnc(rawdir, rawncdir, original_deploymentyaml)
     # merge individual netcdf files into single netcdf files *.gli*.nc and *.pld1*.nc
     seaexplorer.merge_parquet(rawncdir, rawncdir, original_deploymentyaml, kind=kind)
