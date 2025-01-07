@@ -22,7 +22,8 @@ now = datetime.datetime.now()
 row = schedule[schedule.index < now].iloc[-1]
 pilot_phone = row['pilot']
 supervisor_phone = row['supervisor']
-
+if type(supervisor_phone) is float:
+    supervisor_phone = None
 
 def setup_logger(name, log_file, level=logging.INFO, formatter=format_basic):
     handler = logging.FileHandler(log_file)
@@ -68,7 +69,7 @@ def parse_mrs(comm_log_file):
 def elks_text(ddict, recipient=pilot_phone, user='pilot', fake=True):
     alarm_log = logging.getLogger(name=ddict['platform_id'])
 
-    message = f"{ddict['platform_id']} M{ddict['mission']} cycle {ddict['cycle']} alarm code {ddict['security_level']}"
+    message = f"{ddict['platform_id']} M{ddict['mission']} cycle {ddict['cycle']} alarm code {ddict['security_level']}. Source: {ddict['alarm_source']}"
     data = {
         'from': 'VOTOalert',
         'to': recipient,
@@ -82,7 +83,7 @@ def elks_text(ddict, recipient=pilot_phone, user='pilot', fake=True):
                              )
     _log.warning(f"ELKS SEND: {response.text}")
     if response.status_code == 200:
-        alarm_log.info(f"{ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},text_{user}")
+        alarm_log.info(f"{ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},text_{user}, {ddict['alarm_source']}")
     else:
         _log.error(f"failed elks text {response.text}")
 
@@ -105,13 +106,13 @@ def elks_call(ddict, recipient=pilot_phone, user='pilot', fake=True, timeout_sec
                                  data={
                                      'from': secrets_dict['elks_phone'],
                                      'to': recipient,
-                                     'voice_start': '{"play":"https://46elks.com/static/sound/make-call.mp3"}',
+                                     'voice_start': '{"play":"https://callumrollo.com/files/frederik_short.mp3"}',
                                      'timeout': timeout_seconds
                                  }
                                  )
     _log.warning(f"ELKS CALL: {response.text}")
     if response.status_code == 200:
-        alarm_log.info(f"{ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},call_{user}")
+        alarm_log.info(f"{ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},call_{user}, {ddict['alarm_source']}")
     else:
         _log.error(f"failed elks call {response.text}")
 
@@ -123,6 +124,9 @@ def contact_pilot(ddict, fake=True):
 
 
 def contact_supervisor(ddict, fake=True):
+    if not supervisor_phone:
+        _log.warning("No supervisor on duty: no action")
+        return
     _log.warning(f"ESCALATE")
     elks_text(ddict, recipient=supervisor_phone, user='supervisor', fake=fake)
     elks_call(ddict, recipient=supervisor_phone, user='supervisor', fake=fake)

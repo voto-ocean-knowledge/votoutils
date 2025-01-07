@@ -24,12 +24,13 @@ class Dispatcher:
         self.df_mrs = pd.DataFrame()
         self.alarm_dict = {}
         self.dummy_calls = True
+        self.alarm_source = None
         setup_logger(platform_id, self.alarm_log, formatter=format_alarm, level=logging.INFO)
 
     def load_alarm_log(self):
         if Path(self.alarm_log).exists():
             self.df_alarm = pd.read_csv(self.alarm_log,
-                                        names=["datetime","glider","mission","cycle","security_level","action"],
+                                        names=["datetime","glider","mission","cycle","security_level","action", "alarm_source"],
                                         parse_dates=["datetime"])
 
     def load_comm_log(self):
@@ -64,6 +65,7 @@ class Dispatcher:
         if not ddict['security_level']:
             _log.info(f"Alarm cleared {self.platform_id} M{ddict['mission']} cycle {ddict['cycle']}")
             return False
+        self.alarm_source = "GLIMPSE comm log"
         return True
     
     def mail_alarm(self):
@@ -74,7 +76,7 @@ class Dispatcher:
             mail_alerts = json.load(f)
 
         if self.platform_id not in mail_alerts.keys():
-            _log.warning(f"{self.platform_id} not in email alerts json")
+            _log.debug(f"{self.platform_id} not in email alerts json")
             return False
 
         alarm_tuple = mail_alerts[self.platform_id]
@@ -86,11 +88,12 @@ class Dispatcher:
             self.alarm_dict = email_dict
             return True
         if self.alarm_dict['mission'] >= email_dict['mission'] and self.alarm_dict['cycle'] >= email_dict['cycle']:
-            _log.debug(f"stale email. Skipping. mission: {self.alarm_dict['mission']} vs {email_dict['mission']}, "
+            _log.info(f"stale email. Skipping. mission: {self.alarm_dict['mission']} vs {email_dict['mission']}, "
                        f"cycle  {self.alarm_dict['cycle']} vs {email_dict['cycle']}")
             return False
 
         self.alarm_dict = email_dict
+        self.alarm_source = "alseamar email"
         return True
 
     def trigger_alarm(self):
@@ -98,6 +101,7 @@ class Dispatcher:
             return
         ddict = self.alarm_dict
         ddict['platform_id'] = self.platform_id
+        ddict['alarm_source'] = self.alarm_source
         df_action = find_previous_action(self.df_alarm, ddict)
         if df_action.empty:
             previous_action = "None"
@@ -117,7 +121,7 @@ class Dispatcher:
         self.load_comm_log()
         if self.check_comm_log():
             self.trigger_alarm()
-        _log.info(f"{self.platform_id} check email")
+        _log.debug(f"{self.platform_id} check email")
         if self.mail_alarm():
             self.trigger_alarm()
 
