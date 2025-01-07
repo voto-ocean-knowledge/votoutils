@@ -16,8 +16,12 @@ format_alarm = logging.Formatter('%(asctime)s,%(message)s', datefmt="%Y-%m-%d %H
 mail_alarms_json = Path('/data/log/mail_alarms.json')
 with open(script_dir / 'alarm_secrets.json', 'r') as secrets_file:
     secrets_dict = json.load(secrets_file)
+with open(script_dir / 'contacts_secrets.json', 'r') as secrets_file:
+    contacts = json.load(secrets_file)
 
 schedule = pd.read_csv('/data/log/schedule.csv', parse_dates=True, index_col=0, sep=';', dtype=str)
+for name, number in contacts.items():
+    schedule.replace(name, number, inplace=True, regex=True)
 now = datetime.datetime.now()
 row = schedule[schedule.index < now].iloc[-1]
 pilot_phone = row['pilot']

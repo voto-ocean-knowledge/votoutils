@@ -73,8 +73,6 @@ def parse_schedule():
             bad_names.append(name)
     if len(bad_names) > 0:
         mailer("bad names in schedule", f"The following names have been ignored: {bad_names}")
-    for name, number in contacts.items():
-        df.replace(name, number, inplace=True, regex=True)
     df.to_csv("/data/log/schedule.csv", sep=';')
 
 
