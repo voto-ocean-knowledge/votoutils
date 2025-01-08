@@ -31,10 +31,10 @@ def parse_schedule():
     offset_dt = local_now.utcoffset()
     offset = int(offset_dt.seconds / 3600)
 
-    schedule['handover-am'] = schedule['handover-am'].fillna(9 - offset)
-    schedule['handover-pm'] = schedule['handover-pm'].fillna(17 - offset)
+    schedule['handover-am'] = schedule['handover-am'].fillna(8 - offset)
+    schedule['handover-pm'] = schedule['handover-pm'].fillna(16 - offset)
 
-    df = pd.DataFrame({'pilot': ['callum']}, index=[pd.to_datetime('1970-01-01')])
+    df = pd.DataFrame({'pilot': ['Callum']}, index=[pd.to_datetime('1970-01-01')])
     for i, row in schedule.iterrows():
         day_start = i + np.timedelta64(int(row["handover-am"]), 'h')
         day_row = pd.DataFrame({'pilot': [row['pilot-day']],
@@ -49,9 +49,6 @@ def parse_schedule():
                                   #'surface-text': [row['surface-text-night']],
                                   }, index=[night_start])
         df = pd.concat([df, night_row])
-
-    for col in df.columns:
-        df[col] = df[col].str.lower()
 
     strings = list(pd.unique(df[df.columns].values.ravel('K')))
     names = []
