@@ -245,7 +245,9 @@ def surfacing_alerts(fake=True):
     with open(timefile, "w") as f:
         f.write(str(datetime.datetime.now()))
     if not extra_alarm_numbers_surface:
+        _log.info("no one signed up for surfacing alerts")
         return
+    _log.info("Check for surfacing emails")
     # Check gmail account for emails
     mail = imaplib.IMAP4_SSL("imap.gmail.com")
     mail.login(secrets["email_username"], secrets["email_password"])
@@ -302,7 +304,6 @@ def surfacing_alerts(fake=True):
                     mission = int(parts[1][1:])
                     cycle = int(parts[3][1:])
                     ddict = {'glider': int(glider[3:]), 'platform_id': glider, 'mission': mission, 'cycle': cycle, 'security_level': 0, 'alarm_source': "surfacing email"}
-
                     for surface_number in extra_alarm_numbers_surface:
                         elks_text(ddict, recipient=surface_number, fake=fake)
                         elks_call(ddict, recipient=surface_number, fake=fake)
