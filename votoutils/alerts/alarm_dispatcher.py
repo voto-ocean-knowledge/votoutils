@@ -4,7 +4,7 @@ import datetime
 import json
 import logging
 from votoutils.alerts.alarm_utils import setup_logger, format_alarm, secrets_dict, contact_pilot, contact_supervisor, \
-    find_previous_action, parse_mrs, mail_alarms_json, parse_mail_alarms
+    find_previous_action, parse_mrs, mail_alarms_json, parse_mail_alarms, surfacing_alerts
 
 _log = setup_logger('core_log', '/data/log/alarms.log', level=logging.DEBUG)
 
@@ -23,7 +23,7 @@ class Dispatcher:
         self.base_dir = Path(secrets_dict['base_data_dir']) / self.platform_id
         self.df_mrs = pd.DataFrame()
         self.alarm_dict = {}
-        self.dummy_calls = True
+        self.dummy_calls = False
         self.alarm_source = None
         setup_logger(platform_id, self.alarm_log, formatter=format_alarm, level=logging.INFO)
 
@@ -142,5 +142,12 @@ if __name__ == '__main__':
             _log.debug(f"Skip Bastiens glider {platform}")
             continue
         dispatch = Dispatcher(platform)
+        if secrets_dict["dummy_calls"] == "True":
+            dispatch.dummy_calls = True
         dispatch.execute()
+    fake = False
+    if secrets_dict["dummy_calls"] == "True":
+        fake = True
+    surfacing_alerts(fake=fake)
+
     _log.info("******** COMPLETE CHECK *********")

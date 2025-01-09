@@ -6,6 +6,8 @@ import logging
 import datetime
 import email
 import imaplib
+import sys
+from votoutils.utilities.utilities import mailer
 _log = logging.getLogger(name='core_log')
 
 script_dir = Path(__file__).parent.parent.parent.absolute()
@@ -28,6 +30,43 @@ pilot_phone = row['pilot']
 supervisor_phone = row['supervisor']
 if type(supervisor_phone) is float:
     supervisor_phone = None
+
+def extra_alarm_recipients():
+    votoweb_dir = secrets_dict["votoweb_dir"]
+    sys.path.append(votoweb_dir)
+    from voto.data.db_classes import User # noqa
+    from voto.bin.add_profiles import init_db # noqa
+    init_db()
+    users_to_alarm = User.objects(alarm=True)
+    users_to_alarm_surface = User.objects(alarm_surface=True)
+    numbers = []
+    numbers_surface = []
+    for user in users_to_alarm:
+        if user.name not in contacts.keys():
+            _log.error(f"Did not find user {user.name} in contacts")
+            mailer("Missing number",f"Did not find user {user.name} in contacts")
+            continue
+        number = contacts[user.name]
+        if number == pilot_phone:
+            continue
+        numbers.append(number)
+    for user in users_to_alarm_surface:
+        if user.name not in contacts.keys():
+            _log.error(f"Did not find user {user.name} in contacts")
+            mailer("Missing number",f"Did not find user {user.name} in contacts")
+            continue
+        number = contacts[user.name]
+        numbers_surface.append(number)
+    return numbers, numbers_surface
+
+extra_alarm_numbers = []
+extra_alarm_numbers_surface = []
+
+try:
+    extra_alarm_numbers, extra_alarm_numbers_surface = extra_alarm_recipients()
+except:
+    mailer("Failed extra numbers", f"Could not do it")
+
 
 def setup_logger(name, log_file, level=logging.INFO, formatter=format_basic):
     handler = logging.FileHandler(log_file)
@@ -72,8 +111,11 @@ def parse_mrs(comm_log_file):
 
 def elks_text(ddict, recipient=pilot_phone, user='pilot', fake=True):
     alarm_log = logging.getLogger(name=ddict['platform_id'])
+    if ddict['security_level'] == 0:
+        message = f"SURFACING {ddict['platform_id']} M{ddict['mission']} cycle {ddict['cycle']}. Source: {ddict['alarm_source']}"
 
-    message = f"{ddict['platform_id']} M{ddict['mission']} cycle {ddict['cycle']} alarm code {ddict['security_level']}. Source: {ddict['alarm_source']}"
+    else:
+        message = f"ALARM {ddict['platform_id']} M{ddict['mission']} cycle {ddict['cycle']} alarm code {ddict['security_level']}. Source: {ddict['alarm_source']}"
     data = {
         'from': 'VOTOalert',
         'to': recipient,
@@ -123,8 +165,12 @@ def elks_call(ddict, recipient=pilot_phone, user='pilot', fake=True, timeout_sec
 
 def contact_pilot(ddict, fake=True):
     _log.warning(f"PILOT")
-    elks_text(ddict, fake=False)
+    elks_text(ddict, fake=fake)
     elks_call(ddict, fake=fake)
+    if extra_alarm_numbers:
+        for extra_number in extra_alarm_numbers:
+            elks_text(ddict, recipient=extra_number, fake=fake)
+            elks_call(ddict, recipient=extra_number, fake=fake)
 
 
 def contact_supervisor(ddict, fake=True):
@@ -186,6 +232,82 @@ def parse_mail_alarms():
     elapsed = datetime.datetime.now() - start
     _log.info(f"Completed mail check in {elapsed.seconds} seconds")
 
+def surfacing_alerts(fake=True):
+    # check what time email was last checked
+    timefile = Path("lastcheck_surface.txt")
+    if timefile.exists():
+        with open(timefile, "r") as variable_file:
+            for line in variable_file.readlines():
+                last_check = datetime.datetime.fromisoformat((line.strip()))
+    else:
+        last_check = datetime.datetime(1970, 1, 1)
+    # Write the time of this run
+    with open(timefile, "w") as f:
+        f.write(str(datetime.datetime.now()))
+    if not extra_alarm_numbers_surface:
+        return
+    # Check gmail account for emails
+    mail = imaplib.IMAP4_SSL("imap.gmail.com")
+    mail.login(secrets["email_username"], secrets["email_password"])
+    mail.select("inbox")
+
+    result, data = mail.search(None, "ALL")
+    mail_ids = data[0]
+
+    id_list = mail_ids.split()
+    first_email_id = int(id_list[0])
+    latest_email_id = int(id_list[-1])
+    # Cut to last 10 emails
+    if len(id_list) > 10:
+        first_email_id = int(id_list[-10])
+
+    # Check which emails have arrived since the last run of this script
+    unread_emails = []
+    for i in range(first_email_id, latest_email_id + 1):
+        result, data = mail.fetch(str(i), "(RFC822)")
+
+        for response_part in data:
+            if isinstance(response_part, tuple):
+                msg = email.message_from_bytes(response_part[1])
+                date_tuple = email.utils.parsedate_tz(msg["Date"])
+                if date_tuple:
+                    local_date = datetime.datetime.fromtimestamp(
+                        email.utils.mktime_tz(date_tuple),
+                    )
+                    if local_date > last_check:
+                        unread_emails.append(i)
+
+    # Exit if no new emails
+    if not unread_emails:
+        _log.info("No new mail")
+        return
+    _log.debug("New emails")
+
+    # Check new emails
+    for i in unread_emails:
+        _log.debug(f"open mail {i}")
+        result, data = mail.fetch(str(i), "(RFC822)")
+        for response_part in data:
+            if isinstance(response_part, tuple):
+                msg = email.message_from_bytes(response_part[1])
+                email_subject = msg["subject"]
+                if email_subject.lower()[:2] == 'fw':
+                    email_subject = email_subject[4:]
+                email_from = msg["from"]
+                # If email is from alseamar and subject contains ALARM, make some noise
+                if "administrateur@alseamar-cloud.com" in email_from and "ALARM" not in email_subject:
+                    _log.warning(f"Surface {email_subject}")
+                    parts = email_subject.split(' ')
+                    glider = parts[0][1:-1]
+                    mission = int(parts[1][1:])
+                    cycle = int(parts[3][1:])
+                    ddict = {'glider': int(glider[3:]), 'platform_id': glider, 'mission': mission, 'cycle': cycle, 'security_level': 0, 'alarm_source': "surfacing email"}
+
+                    for surface_number in extra_alarm_numbers_surface:
+                        elks_text(ddict, recipient=surface_number, fake=fake)
+                        elks_call(ddict, recipient=surface_number, fake=fake)
+
 
 if __name__ == '__main__':
-    parse_mail_alarms()
+    print(extra_alarm_recipients())
+    surfacing_alerts(fake=True)
