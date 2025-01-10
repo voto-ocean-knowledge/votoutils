@@ -30,6 +30,10 @@ pilot_phone = row['pilot']
 supervisor_phone = row['supervisor']
 if type(supervisor_phone) is float:
     supervisor_phone = None
+if type(pilot_phone) is str:
+    pilot_phone = pilot_phone.replace(" ", "")
+if type(supervisor_phone) is str:
+    supervisor_phone = supervisor_phone.replace(" ", "")
 
 def extra_alarm_recipients():
     votoweb_dir = secrets_dict["votoweb_dir"]
@@ -165,12 +169,17 @@ def elks_call(ddict, recipient=pilot_phone, user='pilot', fake=True, timeout_sec
 
 def contact_pilot(ddict, fake=True):
     _log.warning(f"PILOT")
-    elks_text(ddict, fake=fake)
-    elks_call(ddict, fake=fake)
+    if "," in pilot_phone:
+        for phone_number in pilot_phone.split(','):
+            elks_text(ddict, recipient=phone_number, fake=fake)
+            elks_call(ddict, recipient=phone_number, fake=fake)
+    else:
+        elks_text(ddict, fake=fake)
+        elks_call(ddict, fake=fake)
     if extra_alarm_numbers:
         for extra_number in extra_alarm_numbers:
-            elks_text(ddict, recipient=extra_number, fake=fake)
-            elks_call(ddict, recipient=extra_number, fake=fake)
+            elks_text(ddict, recipient=extra_number, fake=fake, user="self-volunteered")
+            elks_call(ddict, recipient=extra_number, fake=fake, user="self-volunteered")
 
 
 def contact_supervisor(ddict, fake=True):
