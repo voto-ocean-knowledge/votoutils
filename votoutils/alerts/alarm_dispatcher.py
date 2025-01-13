@@ -86,7 +86,13 @@ class Dispatcher:
         if not self.alarm_dict:
             _log.info("email alert to process")
             self.alarm_dict = email_dict
+            self.alarm_source = "alseamar email"
             return True
+        if self.alarm_dict['mission'] > email_dict['mission']:
+            _log.info(f"stale email. Skipping. mission: {self.alarm_dict['mission']} vs {email_dict['mission']}, "
+                      f"cycle  {self.alarm_dict['cycle']} vs {email_dict['cycle']}")
+            return False
+
         if self.alarm_dict['mission'] >= email_dict['mission'] and self.alarm_dict['cycle'] >= email_dict['cycle']:
             _log.info(f"stale email. Skipping. mission: {self.alarm_dict['mission']} vs {email_dict['mission']}, "
                        f"cycle  {self.alarm_dict['cycle']} vs {email_dict['cycle']}")
