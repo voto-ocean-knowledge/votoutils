@@ -11,7 +11,7 @@ with open(script_dir / 'contacts_secrets.json', 'r') as secrets_file:
     
 with open(script_dir / 'alarm_secrets.json', 'r') as secrets_file:
     secrets_dict = json.load(secrets_file)
-
+mail_recipient = secrets_dict["schedule_mail"]
 
 def parse_schedule():
     schedule = pd.read_csv('https://docs.google.com/spreadsheets/d/' +
@@ -69,7 +69,7 @@ def parse_schedule():
             df.replace(name, "", inplace=True, regex=True)
             bad_names.append(name)
     if len(bad_names) > 0:
-        mailer("bad names in schedule", f"The following names have been ignored: {bad_names}")
+        mailer("bad names in schedule", f"The following names have been ignored: {bad_names}. Using the last good schedule",  recipient=mail_recipient)
     df.to_csv("/data/log/schedule.csv", sep=';')
 
 
@@ -77,4 +77,4 @@ if __name__ == '__main__':
     try:
         parse_schedule()
     except:
-        mailer("schedule", "parsing the schedule failed! Using the last good one")
+        mailer("schedule", "parsing the schedule failed! Using the last good one", recipient=mail_recipient)
