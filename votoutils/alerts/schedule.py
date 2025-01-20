@@ -33,7 +33,6 @@ def parse_schedule():
 
         schedule.loc[schedule[f'handover-{shift}'] > 24, f'handover-{shift}'] = np.nan
         schedule.loc[schedule[f'handover-{shift}'] < 0,f'handover-{shift}'] = np.nan
-
     local_now =  datetime.datetime.now().astimezone(pytz.timezone('Europe/Stockholm'))
     offset_dt = local_now.utcoffset()
     offset = int(offset_dt.seconds / 3600)
@@ -43,14 +42,14 @@ def parse_schedule():
 
     df = pd.DataFrame({'pilot': ['Callum']}, index=[pd.to_datetime('1970-01-01')])
     for i, row in schedule.iterrows():
-        day_start = i + np.timedelta64(int(row["handover-am"]), 'h')
+        day_start = i + np.timedelta64(int(60 * row["handover-am"]), 'm')
         day_row = pd.DataFrame({'pilot': [row['pilot-day']],
                                 'supervisor': [row['on-call']],
                                 #'surface-text': [row['surface-text-day']],
                                 }, index=[day_start])
         df = pd.concat([df, day_row])
 
-        night_start = i + np.timedelta64(int(row["handover-pm"]), 'h')
+        night_start = i + np.timedelta64(int( 60 * row["handover-pm"]), 'm')
         night_row = pd.DataFrame({'pilot': [row['pilot-night']],
                                   'supervisor': [row['on-call']],
                                   #'surface-text': [row['surface-text-night']],
