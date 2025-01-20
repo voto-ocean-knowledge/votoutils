@@ -3,6 +3,7 @@ import numpy as np
 from pathlib import Path
 import datetime
 import json
+import pytz
 from votoutils.utilities.utilities import mailer
 
 script_dir = Path(__file__).parent.parent.parent.absolute()
@@ -18,21 +19,27 @@ def parse_schedule():
                            secrets_dict['google_sheet_id'] +
                            '/export?gid=0&format=csv',
                            index_col=0,
-                           ).rename({'handover-am (UTC)': 'handover-am', 'handover-pm (UTC)': 'handover-pm'}, axis=1)
+                           ).rename({'handover-am (UTC)': 'handover-am-raw', 'handover-pm (UTC)': 'handover-pm-raw'}, axis=1)
     schedule.dropna(subset='pilot-day', inplace=True)
     schedule.index = pd.to_datetime(schedule.index)
-    schedule.loc[schedule['handover-am'] > 24, 'handover-am'] = np.nan
-    schedule.loc[schedule['handover-am'] < 0, 'handover-am'] = np.nan
-    schedule.loc[schedule['handover-pm'] > 24, 'handover-pm'] = np.nan
-    schedule.loc[schedule['handover-pm'] < 0, 'handover-pm'] = np.nan
+    for shift in ['am', 'pm']:
+        schedule[f'handover-{shift}'] = schedule[f'handover-{shift}-raw']
+        if pd.api.types.is_object_dtype(schedule[f'handover-{shift}-raw']):
+            time_parts = schedule[f'handover-{shift}-raw'].str.split(":", expand=True)
+            if time_parts.shape[1] == 2:
+                time_parts[1] = time_parts[1].replace({None: 0})
+                schedule[f'handover-{shift}'] = time_parts[0].astype(float) + time_parts[1].astype(float) / 60
+        schedule.drop(f'handover-{shift}-raw', axis=1, inplace=True)
 
-    now = datetime.datetime.now()
-    local_now = now.astimezone()
+        schedule.loc[schedule[f'handover-{shift}'] > 24, f'handover-{shift}'] = np.nan
+        schedule.loc[schedule[f'handover-{shift}'] < 0,f'handover-{shift}'] = np.nan
+
+    local_now =  datetime.datetime.now().astimezone(pytz.timezone('Europe/Stockholm'))
     offset_dt = local_now.utcoffset()
     offset = int(offset_dt.seconds / 3600)
 
-    schedule['handover-am'] = schedule['handover-am'].fillna(8 - offset)
-    schedule['handover-pm'] = schedule['handover-pm'].fillna(16 - offset)
+    schedule['handover-am'] = schedule['handover-am'].fillna(9 - offset)
+    schedule['handover-pm'] = schedule['handover-pm'].fillna(17 - offset)
 
     df = pd.DataFrame({'pilot': ['Callum']}, index=[pd.to_datetime('1970-01-01')])
     for i, row in schedule.iterrows():
