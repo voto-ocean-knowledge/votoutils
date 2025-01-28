@@ -5,6 +5,7 @@ import json
 import logging
 from votoutils.alerts.alarm_utils import setup_logger, format_alarm, secrets_dict, contact_pilot, contact_supervisor, \
     find_previous_action, parse_mrs, mail_alarms_json, parse_mail_alarms, surfacing_alerts
+from votoutils.utilities.utilities import mailer
 
 _log = setup_logger('core_log', '/data/log/alarms.log', level=logging.DEBUG)
 
@@ -138,6 +139,7 @@ if __name__ == '__main__':
         parse_mail_alarms()
     except:
         _log.error("failed to process mail alarms")
+        mailer("failed alerts", f"Failed to execute mail alarms")
     base_dir = Path(secrets_dict['base_data_dir'])
     all_glider_dirs = list(base_dir.glob("SEA*"))
     all_glider_dirs.sort()
@@ -151,9 +153,19 @@ if __name__ == '__main__':
         if secrets_dict["dummy_calls"] == "True":
             dispatch.dummy_calls = True
         dispatch.execute()
+        try:
+            dispatch.execute()
+        except:
+            _log.error("failed to process mail alarms")
+            mailer("failed alerts",f"Failed to execute {platform}")
+
     fake = False
     if secrets_dict["dummy_calls"] == "True":
         fake = True
-    surfacing_alerts(fake=fake)
+    try:
+        surfacing_alerts(fake=fake)
+    except:
+        _log.error("failed to process mail alarms")
+        mailer("failed alerts", f"Failed to execute surfacing alerts")
 
     _log.info("******** COMPLETE CHECK *********")

@@ -102,10 +102,10 @@ def parse_mrs(comm_log_file):
     df_mrs['datetime'] = pd.to_datetime(parts[0].str[1:-1], dayfirst=True)
     df_mrs['message'] = parts[5]
     msg_parts = df_mrs.message.str.split(',', expand=True)
-    df_mrs['glider'] = msg_parts[1].str[3:].astype(int)
-    df_mrs['mission'] = msg_parts[2].astype(int)
-    df_mrs['cycle'] = msg_parts[3].astype(int)
-    df_mrs['security_level'] = msg_parts[4].astype(int)
+    df_mrs['glider'] = msg_parts[1].str.replace(r'\D+','', regex=True).astype(int)
+    df_mrs['mission'] = msg_parts[2].str.replace(r'\D+','', regex=True).astype(int)
+    df_mrs['cycle'] = msg_parts[3].str.replace(r'\D+','', regex=True).astype(int)
+    df_mrs['security_level'] = msg_parts[4].str.replace(r'\D+','', regex=True).fillna(0).astype(int)
     df_mrs = df_mrs[['cycle', 'datetime', 'glider', 'mission', 'security_level']]
     df_mrs['alarm'] = False
     df_mrs.loc[df_mrs.security_level > 0, 'alarm'] = True
