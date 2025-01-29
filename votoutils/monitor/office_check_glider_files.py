@@ -22,14 +22,19 @@ explained_missions = (
     (45, 74),
     (66, 50),
     (55, 81),
+    (44, 23),
+    (56, 22),
+    (44, 43)
 )
 skip_projects = [
     "1_Folder_Template",
+    "00_Folder_Template",
     "2_Simulations",
     "3_SAT_Missions",
     "10_Oman_001",
     "8_KAMI-KZ_001",
     "11_Amundsen_Sea",
+    "temprary_data_store"
 ]
 
 
@@ -129,9 +134,21 @@ def list_missions(to_skip=()):
         if not good:
             continue
         non_proc = proj / "1_Downloaded"
-        if non_proc.is_dir:
+        if non_proc.is_dir():
             proj_glider_dirs = non_proc.glob("SEA*")
             glider_dirs.append(list(proj_glider_dirs))
+            continue
+        sub_dirs = proj.glob("*")
+        for sub_dir in sub_dirs:
+            non_proc = sub_dir / "1_Downloaded"
+            if non_proc.is_dir():
+                for skip in to_skip:
+                    if skip in str(non_proc):
+                        print(f"skipping {skip}")
+                        continue
+                proj_glider_dirs = non_proc.glob("SEA*")
+                glider_dirs.append(list(proj_glider_dirs))
+
     glider_dirs = list(chain(*glider_dirs))
 
     all_mission_paths = []
@@ -139,11 +156,23 @@ def list_missions(to_skip=()):
         mission_dirs = list(glider_dir.glob("SEA*"))
         all_mission_paths.append(mission_dirs)
     all_mission_paths = list(chain(*all_mission_paths))
-    return all_mission_paths
+    good_missions = []
+    for mission_path in all_mission_paths:
+        mission_name = mission_path.parts[-1]
+        try:
+            glider_str, mission_str = mission_name.split('_')
+            glider_num = int(glider_str[3:])
+            mission_num = int(mission_str[1:])
+            good_missions.append(mission_path)
+        except:
+            print(f"{mission_path} is a bad one")
+
+    return good_missions
 
 
 if __name__ == "__main__":
     mission_paths = list_missions(to_skip=skip_projects)
+    foo = bar
     processed_missions = erddap_download()
     for mission_dir in mission_paths:
         good_mission(mission_dir, processed_missions, explained=explained_missions)
