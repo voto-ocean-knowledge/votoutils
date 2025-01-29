@@ -1,12 +1,11 @@
 import xarray as xr
 from pathlib import Path
 import subprocess
-from votoutils.monitor.office_check_glider_files import list_missions, skip_projects
+from votoutils.monitor.office_check_glider_files import list_missions, skip_projects, explained_missions
 from votoutils.utilities.utilities import mailer
 import logging
 
 _log = logging.getLogger(__name__)
-explained_issues = [(66, 45)]
 
 
 def proc(mission_dir, reprocess=False, upload_script="upload_adcp.sh"):
@@ -20,13 +19,13 @@ def proc(mission_dir, reprocess=False, upload_script="upload_adcp.sh"):
         return
 
     dir_parts = list(mission_dir.parts)
-    dir_parts[4] = "4_Processed"
+    dir_parts[-3] = "4_Processed"
     adcp_dir = Path(*dir_parts) / "ADCP"
     pretty_mission = str(mission_dir)[85:]
     glider_str, mission_str = dir_parts[-1].split("_")
     glider = int(glider_str[3:])
     mission = int(mission_str[1:])
-    if (glider, mission) in explained_issues:
+    if (glider, mission) in explained_missions:
         return
     if not adcp_dir.exists():
         # TODO check if this is a mission with ADCP data or not
