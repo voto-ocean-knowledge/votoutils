@@ -12,7 +12,7 @@ def clean_adcp_fn(fn):
 
 def adcp_proc_check(download_mission_path):
     parts = list(download_mission_path.parts)
-    parts[4] = "3_Non_Processed"
+    parts[-3] = "3_Non_Processed"
     mission_path = Path(*parts)
     pretty_mission = str(mission_path)
     adcp_dir = mission_path / "ADCP"
@@ -28,9 +28,9 @@ def adcp_proc_check(download_mission_path):
         print(f"no .ad2cp file found in {pretty_mission}")
         return
     adcp_parts = list(adcp_file.parts)
-    adcp_parts[4] = "4_Processed"
+    adcp_parts[-5] = "4_Processed"
     ad2cp_path_clean = Path(*adcp_parts[:-1])
-    pretty_mission_proc = str(ad2cp_path_clean)[85:]
+    pretty_mission_proc = str(ad2cp_path_clean)[11:]
     if len(list(ad2cp_path_clean.glob("*.nc"))) < 1:
         print(f"no nc found in {pretty_mission_proc}")
     return

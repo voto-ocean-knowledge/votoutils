@@ -63,7 +63,7 @@ def good_mission(
     if "XXX" in str(download_mission_path):
         return
     parts = list(download_mission_path.parts)
-    parts[4] = "3_Non_Processed"
+    parts[-3] = "3_Non_Processed"
     mission_path = Path(*parts)
     pretty_mission = str(mission_path)
     glidermission = mission_path.parts[-1]
@@ -172,7 +172,6 @@ def list_missions(to_skip=()):
 
 if __name__ == "__main__":
     mission_paths = list_missions(to_skip=skip_projects)
-    foo = bar
     processed_missions = erddap_download()
     for mission_dir in mission_paths:
         good_mission(mission_dir, processed_missions, explained=explained_missions)
