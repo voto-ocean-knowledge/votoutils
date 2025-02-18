@@ -63,7 +63,7 @@ class Dispatcher:
             _log.info(f"No alarms for {self.platform_id}")
             return False
         ddict = self.alarm_dict
-        if not ddict['security_level']:
+        if not ddict['alarm']:
             _log.info(f"Alarm cleared {self.platform_id} M{ddict['mission']} cycle {ddict['cycle']}")
             return False
         self.alarm_source = "GLIMPSE comm log"

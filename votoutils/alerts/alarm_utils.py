@@ -102,6 +102,8 @@ def parse_mrs(comm_log_file):
     df_mrs['datetime'] = pd.to_datetime(parts[0].str[1:-1], dayfirst=True)
     df_mrs['message'] = parts[5]
     msg_parts = df_mrs.message.str.split(',', expand=True)
+    df_mrs = df_mrs[msg_parts[1].astype(str) != "None"]
+    msg_parts = df_mrs.message.str.split(',', expand=True)
     df_mrs['glider'] = msg_parts[1].str.replace(r'\D+','', regex=True).astype(int)
     df_mrs['mission'] = msg_parts[2].str.replace(r'\D+','', regex=True).astype(int)
     df_mrs['cycle'] = msg_parts[3].str.replace(r'\D+','', regex=True).astype(int)
@@ -109,6 +111,15 @@ def parse_mrs(comm_log_file):
     df_mrs = df_mrs[['cycle', 'datetime', 'glider', 'mission', 'security_level']]
     df_mrs['alarm'] = False
     df_mrs.loc[df_mrs.security_level > 0, 'alarm'] = True
+    df_alm = df_in[df_in['everything'].str.contains('SEAALR')].copy()
+    if not df_alm.empty:
+        last_alarm = df_alm.tail(1).everything.values[0]
+        alarm_string = last_alarm.split('$SEAALR,')[1]
+        alarm_parts = alarm_string.split(',')
+        alarm_mask = int(alarm_parts[1].split('*')[0])
+        if alarm_mask != 0:
+            _log.warning(f"Masking alarm! Mask {alarm_mask} glider {df_mrs.glider.values[0]} mission {df_mrs.mission.values[0]} cycle {df_mrs.cycle.values[0]}")
+            df_mrs.loc[df_mrs.security_level == alarm_mask, 'alarm'] = False
     df_mrs = df_mrs.sort_values('datetime')
     return df_mrs
 
@@ -320,4 +331,4 @@ def surfacing_alerts(fake=True):
 
 if __name__ == '__main__':
     print(extra_alarm_recipients())
-    surfacing_alerts(fake=True)
+    #surfacing_alerts(fake=True)
