@@ -152,11 +152,10 @@ if __name__ == '__main__':
         dispatch = Dispatcher(platform)
         if secrets_dict["dummy_calls"] == "True":
             dispatch.dummy_calls = True
-        dispatch.execute()
         try:
             dispatch.execute()
         except:
-            _log.error("failed to process mail alarms")
+            _log.error("failed to process glider alarms")
             mailer("failed alerts",f"Failed to execute {platform}")
 
     fake = False

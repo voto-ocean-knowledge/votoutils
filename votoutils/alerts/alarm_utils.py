@@ -118,7 +118,7 @@ def parse_mrs(comm_log_file):
         alarm_parts = alarm_string.split(',')
         alarm_mask = int(alarm_parts[1].split('*')[0])
         if alarm_mask != 0:
-            _log.warning(f"Masking alarm! Mask {alarm_mask} glider {df_mrs.glider.values[0]} mission {df_mrs.mission.values[0]} cycle {df_mrs.cycle.values[0]}")
+            _log.warning(f"Masking alarm! Mask {alarm_mask} glider {df_mrs.glider.values[0]} mission {df_mrs.mission.values[0]} cycle {df_mrs.cycle.values[-1]}")
             df_mrs.loc[df_mrs.security_level == alarm_mask, 'alarm'] = False
     df_mrs = df_mrs.sort_values('datetime')
     return df_mrs
