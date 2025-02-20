@@ -26,6 +26,11 @@ explained_missions = (
     (56, 22),
     (44, 43)
 )
+
+expected_missmatch = (
+    (55, 87),
+)
+
 skip_projects = [
     "1_Folder_Template",
     "00_Folder_Template",
@@ -98,7 +103,7 @@ def good_mission(
         mailer("mission not processed", msg)
         return
     missmatch = abs(len(pld_files) - len(nav_files))
-    if missmatch > 50:
+    if missmatch > 50 and (glider, mission) not in expected_missmatch:
         msg = f"Missmatch {len(nav_files)} nav files vs {len(pld_files)} pld files {pretty_mission}"
         mailer("mission not processed", msg)
         return
