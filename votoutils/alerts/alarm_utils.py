@@ -7,6 +7,7 @@ import datetime
 import email
 import imaplib
 import sys
+import re
 from votoutils.utilities.utilities import mailer
 _log = logging.getLogger(name='core_log')
 
@@ -125,6 +126,7 @@ def parse_mrs(comm_log_file):
 
 
 def elks_text(ddict, recipient=pilot_phone, user='pilot', fake=True):
+    recipient = re.sub(r'[^0-9+]', '', recipient)
     alarm_log = logging.getLogger(name=ddict['platform_id'])
     if ddict['security_level'] == 0:
         message = f"SURFACING {ddict['platform_id']} M{ddict['mission']} cycle {ddict['cycle']}. Source: {ddict['alarm_source']}"
@@ -146,10 +148,11 @@ def elks_text(ddict, recipient=pilot_phone, user='pilot', fake=True):
     if response.status_code == 200:
         alarm_log.info(f"{ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},text_{user}, {ddict['alarm_source']}")
     else:
-        _log.error(f"failed elks text {response.text}")
+        _log.error(f"failed elks text {response.text}  {response.text} to {recipient}. {ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},call_{user}, {ddict['alarm_source']}")
 
 
 def elks_call(ddict, recipient=pilot_phone, user='pilot', fake=True, timeout_seconds=60):
+    recipient = re.sub(r'[^0-9+]', '', recipient)
     alarm_log = logging.getLogger(name=ddict['platform_id'])
     if fake:
         response = requests.post('https://api.46elks.com/a1/sms',
@@ -175,7 +178,7 @@ def elks_call(ddict, recipient=pilot_phone, user='pilot', fake=True, timeout_sec
     if response.status_code == 200:
         alarm_log.info(f"{ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},call_{user}, {ddict['alarm_source']}")
     else:
-        _log.error(f"failed elks call {response.text}")
+        _log.error(f"failed elks call {response.text} to {recipient}. {ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},call_{user}, {ddict['alarm_source']}")
 
 
 def contact_pilot(ddict, fake=True):
