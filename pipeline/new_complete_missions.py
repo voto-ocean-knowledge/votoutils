@@ -5,39 +5,8 @@ import numpy as np
 import logging
 from pathlib import Path
 from pyglider_single_mission import process
-from votoutils.utilities.utilities import mailer
 
 _log = logging.getLogger(__name__)
-
-expected_adcp_fails = [(66, 16)]
-
-
-def adcp_status(glider, mission):
-    pld_files = list(
-        Path(f"/data/data_raw/complete_mission/SEA{glider}/M{mission}/").glob(
-            "*pld1.raw.*gz",
-        ),
-    )
-    if not pld_files:
-        return False
-    pld_file = pld_files[0]
-
-    df = pd.read_csv(pld_file, sep=";")
-    if (glider, mission) in expected_adcp_fails:
-        _log.info("no adcp data expected, none recovered during mission")
-        return True
-
-    if "AD2CP_PRESSURE" not in list(df):
-        _log.info("no adcp data expected")
-        return True
-    if Path(
-        f"/data/data_raw/complete_mission/SEA{glider}/M{mission}/ADCP/sea{glider}_m{mission}_ad2cp.nc",
-    ).exists():
-        _log.info("adcp data file found")
-        return True
-    else:
-        mailer("no-adcp", f"did not find expected ADCP file for SEA{glider} M{mission}")
-        return False
 
 
 def main():
@@ -90,8 +59,6 @@ def main():
         ]
         if not sum(sum(a)):
             _log.warning(f"new mission {mission_path}")
-            if not adcp_status(glider, mission):
-                continue
             process(glider, mission)
             nc_file = list(
                 (
