@@ -1,7 +1,6 @@
 from pathlib import Path
 import pandas as pd
 from itertools import chain
-from votoutils.ad2cp.ad2cp_file_move import adcp_proc_check
 import subprocess
 from votoutils.utilities.utilities import mailer
 
@@ -180,4 +179,3 @@ if __name__ == "__main__":
     processed_missions = erddap_download()
     for mission_dir in mission_paths:
         good_mission(mission_dir, processed_missions, explained=explained_missions)
-        adcp_proc_check(mission_dir)
