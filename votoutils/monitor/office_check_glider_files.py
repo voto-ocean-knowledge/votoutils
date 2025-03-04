@@ -1,7 +1,6 @@
 from pathlib import Path
 import pandas as pd
 from itertools import chain
-from votoutils.ad2cp.ad2cp_file_move import adcp_proc_check
 import subprocess
 from votoutils.utilities.utilities import mailer
 
@@ -22,14 +21,24 @@ explained_missions = (
     (45, 74),
     (66, 50),
     (55, 81),
+    (44, 23),
+    (56, 22),
+    (44, 43)
 )
+
+expected_missmatch = (
+    (55, 87),
+)
+
 skip_projects = [
     "1_Folder_Template",
+    "00_Folder_Template",
     "2_Simulations",
     "3_SAT_Missions",
     "10_Oman_001",
     "8_KAMI-KZ_001",
     "11_Amundsen_Sea",
+    "temprary_data_store"
 ]
 
 
@@ -58,7 +67,7 @@ def good_mission(
     if "XXX" in str(download_mission_path):
         return
     parts = list(download_mission_path.parts)
-    parts[4] = "3_Non_Processed"
+    parts[-3] = "3_Non_Processed"
     mission_path = Path(*parts)
     pretty_mission = str(mission_path)
     glidermission = mission_path.parts[-1]
@@ -93,7 +102,7 @@ def good_mission(
         mailer("mission not processed", msg)
         return
     missmatch = abs(len(pld_files) - len(nav_files))
-    if missmatch > 50:
+    if missmatch > 50 and (glider, mission) not in expected_missmatch:
         msg = f"Missmatch {len(nav_files)} nav files vs {len(pld_files)} pld files {pretty_mission}"
         mailer("mission not processed", msg)
         return
@@ -129,9 +138,21 @@ def list_missions(to_skip=()):
         if not good:
             continue
         non_proc = proj / "1_Downloaded"
-        if non_proc.is_dir:
+        if non_proc.is_dir():
             proj_glider_dirs = non_proc.glob("SEA*")
             glider_dirs.append(list(proj_glider_dirs))
+            continue
+        sub_dirs = proj.glob("*")
+        for sub_dir in sub_dirs:
+            non_proc = sub_dir / "1_Downloaded"
+            if non_proc.is_dir():
+                for skip in to_skip:
+                    if skip in str(non_proc):
+                        print(f"skipping {skip}")
+                        continue
+                proj_glider_dirs = non_proc.glob("SEA*")
+                glider_dirs.append(list(proj_glider_dirs))
+
     glider_dirs = list(chain(*glider_dirs))
 
     all_mission_paths = []
@@ -139,7 +160,18 @@ def list_missions(to_skip=()):
         mission_dirs = list(glider_dir.glob("SEA*"))
         all_mission_paths.append(mission_dirs)
     all_mission_paths = list(chain(*all_mission_paths))
-    return all_mission_paths
+    good_missions = []
+    for mission_path in all_mission_paths:
+        mission_name = mission_path.parts[-1]
+        try:
+            glider_str, mission_str = mission_name.split('_')
+            glider_num = int(glider_str[3:])
+            mission_num = int(mission_str[1:])
+            good_missions.append(mission_path)
+        except:
+            print(f"{mission_path} is a bad one")
+
+    return good_missions
 
 
 if __name__ == "__main__":
@@ -147,4 +179,3 @@ if __name__ == "__main__":
     processed_missions = erddap_download()
     for mission_dir in mission_paths:
         good_mission(mission_dir, processed_missions, explained=explained_missions)
-        adcp_proc_check(mission_dir)
