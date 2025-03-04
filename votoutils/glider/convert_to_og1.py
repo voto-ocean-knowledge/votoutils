@@ -1,3 +1,4 @@
+import datetime
 import pandas as pd
 import numpy as np
 import xarray as xr
@@ -13,6 +14,7 @@ variables_sensors = {
     "PRES": "CTD",
     "PSAL": "CTD",
     "TEMP": "CTD",
+    "DEPTH": "CTD",
     "BBP700": "fluorometers",
     "CHLA": "fluorometers",
     "PRES_ADCP": "ADVs and turbulence probes",
@@ -61,7 +63,6 @@ def add_sensors(ds, dsa):
         if isinstance(eval(var), dict):
             attrs.pop(key)
     ds.attrs = attrs
-
     for key, sensor_type in variables_sensors.items():
         if key in dsa.variables:
             instr_key = sensor_name_type[sensor_type]
@@ -111,15 +112,15 @@ def convert_to_og1(ds, num_vals=None):
     dsa = dsa.set_coords(("TIME", "LATITUDE", "LONGITUDE", "DEPTH"))
     for vname in ["LATITUDE", "LONGITUDE", "TIME"]:
         dsa[f"{vname}_GPS"] = dsa[vname].copy()
-        dsa[f"{vname}_GPS"].values[dsa["nav_state"].values != 119] = np.nan
+        dsa[f"{vname}_GPS"].values[dsa["NAV_STATE"].values != 119] = np.nan
         dsa[f"{vname}_GPS"].attrs["long_name"] = f"{vname.lower()} of each GPS location"
-    dsa["LATITUDE_GPS"].attrs["URI"] = (
+    dsa["LATITUDE_GPS"].attrs["vocabulary"] = (
         "https://vocab.nerc.ac.uk/collection/OG1/current/LAT_GPS/"
     )
-    dsa["LONGITUDE_GPS"].attrs["URI"] = (
+    dsa["LONGITUDE_GPS"].attrs["vocabulary"] = (
         "https://vocab.nerc.ac.uk/collection/OG1/current/LON_GPS/"
     )
-    seaex_phase = dsa["nav_state"].values
+    seaex_phase = dsa["NAV_STATE"].values
     standard_phase = np.zeros(len(seaex_phase)).astype(int)
     standard_phase[seaex_phase == 115] = 3
     standard_phase[seaex_phase == 116] = 3
@@ -139,8 +140,15 @@ def convert_to_og1(ds, num_vals=None):
         },
     )
     ds, dsa = add_sensors(ds, dsa)
-    attrs = ds.attrs
-    ts = pd.to_datetime(ds.time_coverage_start).strftime("%Y%m%dT%H%M")
+    attrs = {}#ds.attrs
+    for key in ['glider_serial', 'dataset_id', 'contributor_name', 'comment']:
+        attrs[key] = ds.attrs[key]
+    for drop_attr in ["Metadata_Conventions"]:
+        if drop_attr in attrs.keys():
+            attrs.pop(drop_attr)
+    start_datetime =  pd.to_datetime(dsa.TIME.values, unit='s').min()
+    ts = start_datetime.strftime("%Y%m%dT%H%M")
+    dt_created =datetime.datetime.now().strftime("%Y%m%dT%H%M")
     if "delayed" in ds.attrs["dataset_id"]:
         postscript = "delayed"
     else:
@@ -161,7 +169,7 @@ def convert_to_og1(ds, num_vals=None):
     attrs["contributing_institutions_role_vocabulary"] = (
         "https://vocab.nerc.ac.uk/collection/W08/current/"
     )
-    attrs["date_modified"] = attrs["date_created"]
+    attrs["date_created"] = dt_created
     attrs["agency"] = "Voice of the Ocean"
     attrs["agency_role"] = "contact point"
     attrs["agency_role_vocabulary"] = "https://vocab.nerc.ac.uk/collection/C86/current/"
@@ -176,7 +184,7 @@ def convert_to_og1(ds, num_vals=None):
         attrs["comment"] = (
             f"Dataset for demonstration purposes only. Original dataset truncated to {num_vals} values for the sake of simplicity"
         )
-    attrs["start_date"] = attrs["time_coverage_start"]
+    attrs["start_date"] = ts
     dsa.attrs = attrs
     dsa["TRAJECTORY"] = xr.DataArray(
         ds.attrs["id"],
@@ -237,7 +245,6 @@ vars_as_is = [
     "ad2cp_beam4_cell_number1",
     "vertical_distance_to_seafloor",
     "profile_direction",
-    "profile_num",
     "nav_state",
 ]
 
@@ -262,9 +269,11 @@ def standardise_og10(ds):
                 dsa[f"{name}_QC"] = ("time", ds[qc_name].values, ds[qc_name].attrs)
                 dsa[name].attrs["ancillary_variables"] = f"{name}_QC"
         else:
-            dsa[var_name] = ("time", ds[var_name].values, ds[var_name].attrs)
-            if var_name not in vars_as_is:
+            if var_name in vars_as_is:
+                dsa[var_name.upper()] = ("time", ds[var_name].values, ds[var_name].attrs)
                 _log.error(f"variable {var_name} not translated. Will be added as-is")
+            else:
+                _log.error(f"variable {var_name} not to be included. Dropping")
 
     dsa = set_best_dtype(dsa)
     return dsa

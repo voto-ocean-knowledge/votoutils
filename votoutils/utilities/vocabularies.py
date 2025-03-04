@@ -35,6 +35,7 @@ standard_names = {
     "cdom_raw": "FLUOCDOM",
     "phycoerythrin": "PHYC",
     "phycoerythrin_raw": "FLUOPHYC",
+    "phycocyanin": "PHYCOCYANIN",
     "tke_dissipation_shear_1": "EPSIFY01",
     "tke_dissipation_shear_2": "EPSIFY02",
 }
@@ -51,7 +52,7 @@ vocab_attrs = {
         "valid_max": 90,
         "valid_min": -90,
         "axis": "Y",
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/LAT/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/LAT/",
     },
     "LONGITUDE": {
         "coordinate_reference_frame": "urn:ogc:crs:EPSG::4326",
@@ -64,7 +65,7 @@ vocab_attrs = {
         "valid_max": 180,
         "valid_min": -180,
         "axis": "X",
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/LON/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/LON/",
     },
     "TIME": {
         "long_name": "time of measurement",
@@ -73,7 +74,7 @@ vocab_attrs = {
         "units": "seconds since 1970-01-01 00:00:00 UTC",
         "calendar": "gregorian",
         "axis": "T",
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/AYMD/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/AYMD/",
     },
     "AD2CP_TIME": {
         "long_name": "time of measurement",
@@ -82,7 +83,7 @@ vocab_attrs = {
         "units": "seconds since 1970-01-01 00:00:00 UTC",
         "calendar": "gregorian",
         "axis": "T",
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/AYMD/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/AYMD/",
         "comment": "measured by AD2CP",
     },
     "DEPTH": {
@@ -109,7 +110,7 @@ vocab_attrs = {
         "units": "mmol m-3",
         "valid_max": 425,
         "valid_min": 0,
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/DOXY/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/DOXY/",
     },
     "CHLA": {
         "long_name": "chlorophyll",
@@ -118,7 +119,7 @@ vocab_attrs = {
         "units": "mg m-3",
         "valid_max": 50,
         "valid_min": 0,
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/CPWC/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/CPWC/",
     },
     "CNDC": {
         "sensor": "sensor_ctd",
@@ -128,7 +129,7 @@ vocab_attrs = {
         "units": "mS cm-1",
         "valid_max": 85.0,
         "valid_min": 0.0,
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/CNDC/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/CNDC/",
     },
     "PRES": {
         "comment": "ctd pressure sensor",
@@ -142,7 +143,7 @@ vocab_attrs = {
         "units": "dbar",
         "valid_max": 2000,
         "valid_min": 0,
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/PRES",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/PRES",
     },
     "PSAL": {
         "long_name": "water salinity",
@@ -154,7 +155,7 @@ vocab_attrs = {
         "sensor": "sensor_ctd",
         "valid_max": 40,
         "valid_min": 0,
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/PSAL/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/PSAL/",
     },
     "TEMP": {
         "long_name": "Temperature of the water body by CTD ",
@@ -163,7 +164,7 @@ vocab_attrs = {
         "units": "Celsius",
         "valid_max": 42,
         "valid_min": -5,
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/TEMP/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/TEMP/",
     },
     "THETA": {
         "long_name": "Potential temperature of the water body by computation using UNESCO 1983 algorithm.",
@@ -173,7 +174,7 @@ vocab_attrs = {
         "units": "Celsius",
         "valid_max": 42,
         "valid_min": -5,
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/THETA/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/THETA/",
     },
     "DENSITY": {
         "long_name": "The mass of a unit volume of any body of fresh or salt water",
@@ -184,7 +185,7 @@ vocab_attrs = {
         "sources": "salinity temperature pressure",
         "valid_min": 1000,
         "valid_max": 1040,
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/DENSITY/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/DENSITY/",
     },
     "PROFILE_NUMBER": {
         "long_name": "profile index",
@@ -195,7 +196,7 @@ vocab_attrs = {
         "comment": "This is the variable NAV_STATE from the SeaExplorer nav file",
         "units": "1",
     },
-    "AD2CP_PRES": {
+    "PRES_ADCP": {
         "comment": "adcp pressure sensor",
         "sensor": "sensor_adcp",
         "long_name": "Pressure (spatial coordinate) exerted by the water body by profiling pressure sensor and "
@@ -207,13 +208,13 @@ vocab_attrs = {
         "units": "dbar",
         "valid_max": 2000,
         "valid_min": 0,
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/PRES",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/PRES",
     },
     "BBP700": {
         "long_name": "Particle backscattering at 700 nanometers.",
         "observation_type": "calculated",
         "units": "m-1",
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/BBP700/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/BBP700/",
         "processing": "Particulate backscatter bbp calculated following methods in the Ocean Observatories "
         "Initiative document DATA PRODUCT SPECIFICATION FOR OPTICAL BACKSCATTER (RED WAVELENGTHS) "
         "Version 1-05 Document Control Number 1341-00540 2014-05-28. Downloaded from "
@@ -224,7 +225,7 @@ vocab_attrs = {
         "long_name": "Raw signal from backscattering sensor.",
         "observation_type": "observed",
         "units": "1",
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/RBBP700/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/RBBP700/",
     },
     "ED380": {
         "average_method": "geometric mean",
@@ -232,7 +233,7 @@ vocab_attrs = {
         "observation_type": "measured",
         "standard_name": "380nm_downwelling_irradiance",
         "units": "W m-2 nm-1",
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/ED380/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/ED380/",
     },
     "ED490": {
         "average_method": "geometric mean",
@@ -240,41 +241,41 @@ vocab_attrs = {
         "observation_type": "measured",
         "standard_name": "490nm_downwelling_irradiance",
         "units": "W m-2 nm-1",
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/ED490/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/ED490/",
     },
     "DPAR": {
         "long_name": "Downwelling vector irradiance as energy of electromagnetic radiation (PAR wavelengths) in "
         "the water body by cosine-collector radiometer.",
         "observation_type": "measured",
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/DPAR/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/DPAR/",
     },
     "PITCH": {
         "long_name": "Orientation (pitch) of measurement platform by inclinometer",
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/PITCH/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/PITCH/",
     },
     "ROLL": {
         "long_name": "Orientation (roll angle) of measurement platform by inclinometer",
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/ROLL/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/ROLL/",
     },
     "HEADING": {
         "long_name": "Orientation (horizontal relative to magnetic north) of measurement platform {heading} by "
         "compass",
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/HEADING/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/HEADING/",
     },
     "AD2CP_PITCH": {
         "long_name": "Orientation (pitch) of measurement platform by inclinometer",
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/PITCH/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/PITCH/",
         "comment": "measured by AD2CP",
     },
     "AD2CP_ROLL": {
         "long_name": "Orientation (roll angle) of measurement platform by inclinometer",
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/ROLL/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/ROLL/",
         "comment": "measured by AD2CP",
     },
     "AD2CP_HEADING": {
         "long_name": "Orientation (horizontal relative to magnetic north) of measurement platform {heading} by "
         "compass",
-        "URI": "https://vocab.nerc.ac.uk/collection/P02/current/HEADING/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/HEADING/",
         "comment": "measured by AD2CP",
     },
     "TEMP_OXYGEN": {
@@ -285,49 +286,53 @@ vocab_attrs = {
         "units": "Celsius",
         "valid_max": 42,
         "valid_min": -5,
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/TEMP/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/TEMP/",
     },
     "POTDENS0": {
         "long_name": "Potential density of water body at surface",
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/POTDENS0/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/POTDENS0/",
     },
     "FLUOCHLA": {
         "long_name": "Raw signal (counts) of instrument output by in-situ chlorophyll fluorometer",
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/FLUOCHLA/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/FLUOCHLA/",
     },
     "TURB": {
         "long_name": "Turbidity of water in the water body",
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/TURB/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/TURB/",
     },
     "TCPUCHLA": {
         "long_name": "Turbidity of water in the water body",
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/TCPUCHLA/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/TCPUCHLA/",
     },
     "CDOM": {
         "long_name": "Concentration of coloured dissolved organic matter in sea water",
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/CDOM/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/CDOM/",
     },
     "FLUOCDOM": {
         "long_name": "Raw fluorescence from coloured dissolved organic matter sensor",
-        "URI": "https://vocab.nerc.ac.uk/collection/OG1/current/FLUOCDOM/",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/FLUOCDOM/",
     },
     "PHYC": {
         "long_name": "Phycoerythrin concentration per unit volume of fresh or salt water.",
-        "URI": "http://vocab.nerc.ac.uk/collection/OG1/current/PHYC/",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/OG1/current/PHYC/",
     },
     "FLUOPHYC": {
         "long_name": "Phycoerythrin signal from fluorescence sensor",
-        "URI": "http://vocab.nerc.ac.uk/collection/OG1/current/FLUOPHYC/",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/OG1/current/FLUOPHYC/",
+    },
+    "PHYCOCYANIN": {
+        "long_name": "Phycocyanin concentration per unit volume of fresh or salt water.",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/OG1/current/PHYCOCYANIN/",
     },
     "EPSIFY01": {
         "long_name": "Log10 turbulent kinetic energy dissipation {epsilon} per unit volume of the water body by "
         "turbulence profiler shear sensor",
-        "URI": "http://vocab.nerc.ac.uk/collection/P01/current/EPSIFY01/",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/P01/current/EPSIFY01/",
     },
     "EPSIFY02": {
         "long_name": "Log10 turbulent kinetic energy dissipation {epsilon} per unit volume of the water body by "
         "turbulence profiler shear sensor",
-        "URI": "http://vocab.nerc.ac.uk/collection/P01/current/EPSIFY02/",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/P01/current/EPSIFY02/",
     },
     "vertical_displacement": {
         "long_name": "Vertical displacement of platform, from MOSE sensor",
@@ -363,42 +368,42 @@ vocab_attrs = {
         "long_name": "Zero-crossing period of waves (highest one third) {significant wave period Ts} on the water body",
         "sensor": "sensor_wave",
         "units": "s",
-        "URI": "http://vocab.nerc.ac.uk/collection/P01/current/GTZHZZ01/",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/P01/current/GTZHZZ01/",
     },
     "significant_wave_height": {
         "long_name": "Significant wave height of waves {Hs} on the water body",
         "sensor": "sensor_wave",
         "units": "m",
-        "URI": "http://vocab.nerc.ac.uk/collection/P01/current/GTDHZZ01/",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/P01/current/GTDHZZ01/",
     },
     "HUMIDITY": {
         "long_name": "Relative humidity of the atmosphere",
         "units": "percent",
         "sensor": "sensor_meteorology",
-        "URI": "http://vocab.nerc.ac.uk/collection/P01/current/CRELZZ01/",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/P01/current/CRELZZ01/",
     },
     "PRESSURE_AIR": {
         "long_name": "Pressure (spatial coordinate) exerted by the atmosphere",
         "units": "dbar",
         "sensor": "sensor_meteorology",
-        "URI": "http://vocab.nerc.ac.uk/collection/P01/current/CAPBZZ01/",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/P01/current/CAPBZZ01/",
     },
     "TEMP_AIR": {
         "long_name": "Temperature of the atmosphere by dry bulb thermometer",
         "units": "Celsius",
         "sensor": "sensor_meteorology",
-        "URI": "http://vocab.nerc.ac.uk/collection/P01/current/CDTASS01/",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/P01/current/CDTASS01/",
     },
     "WIND_SPEED": {
         "long_name": "Speed of wind {wind speed} in the atmosphere by in-situ anemometer",
         "units": "m s-1",
         "sensor": "sensor_meteorology",
-        "URI": "http://vocab.nerc.ac.uk/collection/P01/current/EWSBSS01/",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/P01/current/EWSBSS01/",
     },
     "WIND_DIRECTION": {
         "long_name": "Direction (from) of wind relative to True North {wind direction} in the atmosphere by in-situ anemometer",
         "sensor": "sensor_meteorology",
-        "URI": "http://vocab.nerc.ac.uk/collection/P01/current/EWDASS01/",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/P01/current/EWDASS01/",
     },
 }
 
@@ -447,7 +452,16 @@ sensor_vocabs = {
         "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0026/",
         "sensor_model": "WET Labs {Sea-Bird WETLabs} ECO FLNTU combined fluorometer and turbidity sensor",
         "sensor_model_vocabulary": "https://vocab.nerc.ac.uk/collection/L22/current/TOOL0215/",
-        "long_name": " WET Labs ECO FLNTU",
+        "long_name": "WET Labs ECO FLNTU",
+    },
+    "RBR Tridente": {
+        "sensor_type": "fluorometers",
+        "sensor_type_vocabulary": "https://vocab.nerc.ac.uk/collection/L05/current/113/",
+        "sensor_maker": "RBR",
+        "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0049/",
+        "sensor_model": "RBRtridente: three-channel fluorescence and backscatter sensor",
+        "sensor_model_vocabulary": "TBA",
+        "long_name": "RBR Tridente",
     },
     "Nortek AD2CP": {
         "sensor_type": "ADVs and turbulence probes",
