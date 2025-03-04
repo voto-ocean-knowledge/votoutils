@@ -4,10 +4,7 @@ from votoutils.monitor.office_check_glider_files import (
     erddap_download,
     explained_missions,
     good_mission,
-    adcp_proc_check,
 )
-from votoutils.ad2cp.ad2cp_nc_clean import proc
-from votoutils.utilities.utilities import mailer
 from votoutils.upload.sync_functions import sync_script_dir
 import logging
 
@@ -26,19 +23,10 @@ if __name__ == "__main__":
     mission_list = list_missions(to_skip=skip_projects)
     processed_missions = erddap_download()
     for mission in mission_list:
-        try:
-            proc(
-                mission,
-                reprocess=False,
-                upload_script=sync_script_dir / "upload_adcp.sh",
-            )
-        except FileExistsError:
-            mailer("adcp-proc-error", f"failed with {mission}")
         good_mission(
             mission,
             processed_missions,
             explained=explained_missions,
             upload_script=sync_script_dir / "upload.sh",
         )
-        adcp_proc_check(mission)
     _log.info("complete")
