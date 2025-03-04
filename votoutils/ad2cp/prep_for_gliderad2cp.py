@@ -8,6 +8,7 @@ import json
 import pandas as pd
 from votoutils.upload.sync_functions import sync_script_dir
 from votoutils.utilities.utilities import mailer
+
 _log = logging.getLogger(__name__)
 script_dir = Path(__file__).parent.absolute()
 secrets_dir = Path(__file__).parent.parent.parent.absolute()
@@ -16,7 +17,10 @@ with open(secrets_dir / "email_secrets.json") as json_file:
     secrets = json.load(json_file)
 nortek_jar_path = secrets["nortek_jar_path"]
 
-df = pd.read_csv("https://erddap.observations.voiceoftheocean.org/erddap/tabledap/ad2cp.csvp?url")
+df = pd.read_csv(
+    "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/ad2cp.csvp?url"
+)
+
 
 def convert_from_ad2cp(dir_in, outfile, reprocess=False):
     _log.debug(f"looking for ad2cp files in {dir_in}")
@@ -35,7 +39,7 @@ def convert_from_ad2cp(dir_in, outfile, reprocess=False):
     _log.debug(f"Converting {infile}")
 
     with tempfile.TemporaryDirectory() as tmpdirname:
-        _log.debug(f'created temporary directory {tmpdirname}')
+        _log.debug(f"created temporary directory {tmpdirname}")
         tmp_ad2cp = f"{tmpdirname}/{fn}"
         shutil.copy(infile, tmp_ad2cp)
 
@@ -45,14 +49,17 @@ def convert_from_ad2cp(dir_in, outfile, reprocess=False):
                 str(script_dir / "convert_from_nortek.sh"),
                 str(nortek_jar_path),
                 str(tmpdirname),
-                str(fn)
+                str(fn),
             ],
         )
-        tmp_nc = list(Path(tmpdirname).glob('*.nc'))[0]
+        tmp_nc = list(Path(tmpdirname).glob("*.nc"))[0]
         shutil.copy(tmp_nc, outfile)
     _log.info(f"Converted {outfile}")
 
-def convert_ad2cp_to_nc(mission_dir, upload_script="upload_adcp_erddap.sh", upload=True):
+
+def convert_ad2cp_to_nc(
+    mission_dir, upload_script="upload_adcp_erddap.sh", upload=True
+):
     _log.debug(f"copy ad2cp data for {mission_dir}")
     if "XXX" in str(mission_dir):
         return
@@ -71,7 +78,7 @@ def convert_ad2cp_to_nc(mission_dir, upload_script="upload_adcp_erddap.sh", uplo
     glider = int(glider_str[3:])
     mission = int(mission_str[1:])
     destination_file = destination_dir / f"SEA{str(glider).zfill(3)}_M{mission}.ad2cp"
-    nc_out_fn =  f"SEA{str(glider).zfill(3)}_M{mission}.ad2cp.00000.nc"
+    nc_out_fn = f"SEA{str(glider).zfill(3)}_M{mission}.ad2cp.00000.nc"
     nc_out_file = destination_dir / nc_out_fn
     if nc_out_file.exists():
         _log.info(f"destination file {nc_out_file} already exists")
@@ -82,7 +89,7 @@ def convert_ad2cp_to_nc(mission_dir, upload_script="upload_adcp_erddap.sh", uplo
         subprocess.check_call(
             [
                 "/usr/bin/bash",
-                str(sync_script_dir /upload_script),
+                str(sync_script_dir / upload_script),
                 str(glider),
                 str(mission),
                 str(nc_out_file),
@@ -111,7 +118,7 @@ def convert_ad2cp_to_nc(mission_dir, upload_script="upload_adcp_erddap.sh", uplo
         subprocess.check_call(
             [
                 "/usr/bin/bash",
-                str(sync_script_dir /upload_script),
+                str(sync_script_dir / upload_script),
                 str(glider),
                 str(mission),
                 str(nc_out_file),
@@ -126,7 +133,8 @@ def convert_all_ad2cp():
     for mission_dir in mission_list:
         convert_ad2cp_to_nc(mission_dir)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     logf = "/data/log/ad2cp_to_nc.log"
     logging.basicConfig(
         filename=logf,

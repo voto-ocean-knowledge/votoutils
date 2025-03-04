@@ -10,7 +10,7 @@ from votoutils.utilities import utilities
 from votoutils.utilities import vocabularies
 
 
-class Sailbuoy():
+class Sailbuoy:
     def __init__(self, input_dir=".", base_dir="."):
         self.input_dir = Path(input_dir)
         self.base_dir = Path(base_dir)
@@ -25,7 +25,7 @@ class Sailbuoy():
         parse_legato(self.input_dir, self.output_dir)
 
     def parse_gmx560(self):
-        parse_gmx560(self.input_dir / 'DATA', self.output_dir)
+        parse_gmx560(self.input_dir / "DATA", self.output_dir)
 
 
 def parse_nrt(auto_dir, output_dir):
@@ -37,7 +37,7 @@ def parse_nrt(auto_dir, output_dir):
         col = df[col_name]
         item = col[0]
         new_name = item.split(" = ")[0]
-        df[new_name] = col.str[len(new_name) + 3:]
+        df[new_name] = col.str[len(new_name) + 3 :]
     df = df.drop(og_cols, axis=1)
     df = df.replace("NULL ", "NaN")
     df = df.dropna()
@@ -97,14 +97,16 @@ def parse_nrt(auto_dir, output_dir):
             subset=["significant_wave_height"],
         )
     )
-    mose_nrt.to_parquet(output_dir/ "mose_nrt.parquet")
+    mose_nrt.to_parquet(output_dir / "mose_nrt.parquet")
     df_nrt = data.join(auto, how="outer", lsuffix="_data", rsuffix="_auto")
     df_nrt.to_csv(output_dir / "nrt.csv")
 
 
 def parse_legato(input_dir, output_dir):
     df_legato = (
-        pd.read_csv(list((input_dir / "LEGATO").glob("*data.txt"))[0], parse_dates=["Time"])
+        pd.read_csv(
+            list((input_dir / "LEGATO").glob("*data.txt"))[0], parse_dates=["Time"]
+        )
         .set_index(
             "Time",
         )
@@ -525,7 +527,11 @@ def export_dataset():
             ds[name] = ("time", df[col_name], vocabularies.vocab_attrs[name])
         else:
             print(f"fail for {col_name}")
-    ds['PSAL'] = xr.DataArray('N_MEASUREMENTS', gsw.SP_from_C(ds.CNDC, ds.TEMP, ds.PRES), vocabularies.vocab_attrs['PSAL'])
+    ds["PSAL"] = xr.DataArray(
+        "N_MEASUREMENTS",
+        gsw.SP_from_C(ds.CNDC, ds.TEMP, ds.PRES),
+        vocabularies.vocab_attrs["PSAL"],
+    )
     # cut dataset down to active deployed period
     start = "2024-05-29T09:00:00"
     end = "2024-07-28T06:00:00"
@@ -542,7 +548,10 @@ def export_dataset():
 
 
 if __name__ == "__main__":
-    sb = Sailbuoy("/home/callum/Documents/data-flow/sailbuoy/process/SB2120", "/home/callum/Downloads/tmpsb")
+    sb = Sailbuoy(
+        "/home/callum/Documents/data-flow/sailbuoy/process/SB2120",
+        "/home/callum/Downloads/tmpsb",
+    )
     sb.parse_legato()
     sb.parse_nrt()
     sb.parse_gmx560()

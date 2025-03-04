@@ -140,15 +140,15 @@ def convert_to_og1(ds, num_vals=None):
         },
     )
     ds, dsa = add_sensors(ds, dsa)
-    attrs = {}#ds.attrs
-    for key in ['glider_serial', 'dataset_id', 'contributor_name', 'comment']:
+    attrs = {}  # ds.attrs
+    for key in ["glider_serial", "dataset_id", "contributor_name", "comment"]:
         attrs[key] = ds.attrs[key]
     for drop_attr in ["Metadata_Conventions"]:
         if drop_attr in attrs.keys():
             attrs.pop(drop_attr)
-    start_datetime =  pd.to_datetime(dsa.TIME.values, unit='s').min()
+    start_datetime = pd.to_datetime(dsa.TIME.values, unit="s").min()
     ts = start_datetime.strftime("%Y%m%dT%H%M")
-    dt_created =datetime.datetime.now().strftime("%Y%m%dT%H%M")
+    dt_created = datetime.datetime.now().strftime("%Y%m%dT%H%M")
     if "delayed" in ds.attrs["dataset_id"]:
         postscript = "delayed"
     else:
@@ -270,7 +270,11 @@ def standardise_og10(ds):
                 dsa[name].attrs["ancillary_variables"] = f"{name}_QC"
         else:
             if var_name in vars_as_is:
-                dsa[var_name.upper()] = ("time", ds[var_name].values, ds[var_name].attrs)
+                dsa[var_name.upper()] = (
+                    "time",
+                    ds[var_name].values,
+                    ds[var_name].attrs,
+                )
                 _log.error(f"variable {var_name} not translated. Will be added as-is")
             else:
                 _log.error(f"variable {var_name} not to be included. Dropping")

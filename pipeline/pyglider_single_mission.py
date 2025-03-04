@@ -95,7 +95,7 @@ def process(glider, mission):
 
     if adcp_data_present(glider, mission):
         _log.info("TODO process adcp data")
-        #proc_gliderad2cp(glider, mission)
+        # proc_gliderad2cp(glider, mission)
     update_processing_time(glider, mission, start)
 
     sys.path.append(str(parent_dir / "quick-plots"))

@@ -217,5 +217,3 @@ def add_standard_global_attrs(ds):
             continue
         ds.attrs[key] = val
     return ds
-if __name__ == '__main__':
-    mailer("a", "A", "a")

@@ -23,12 +23,10 @@ explained_missions = (
     (55, 81),
     (44, 23),
     (56, 22),
-    (44, 43)
+    (44, 43),
 )
 
-expected_missmatch = (
-    (55, 87),
-)
+expected_missmatch = ((55, 87),)
 
 skip_projects = [
     "1_Folder_Template",
@@ -38,7 +36,7 @@ skip_projects = [
     "10_Oman_001",
     "8_KAMI-KZ_001",
     "11_Amundsen_Sea",
-    "temprary_data_store"
+    "temprary_data_store",
 ]
 
 
@@ -164,7 +162,7 @@ def list_missions(to_skip=()):
     for mission_path in all_mission_paths:
         mission_name = mission_path.parts[-1]
         try:
-            glider_str, mission_str = mission_name.split('_')
+            glider_str, mission_str = mission_name.split("_")
             glider_num = int(glider_str[3:])
             mission_num = int(mission_str[1:])
             good_missions.append(mission_path)
