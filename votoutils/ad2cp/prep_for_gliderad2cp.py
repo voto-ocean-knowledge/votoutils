@@ -5,7 +5,9 @@ from pathlib import Path
 import logging
 import tempfile
 import json
-
+import pandas as pd
+from votoutils.upload.sync_functions import sync_script_dir
+from votoutils.utilities.utilities import mailer
 _log = logging.getLogger(__name__)
 script_dir = Path(__file__).parent.absolute()
 secrets_dir = Path(__file__).parent.parent.parent.absolute()
@@ -13,6 +15,8 @@ secrets_dir = Path(__file__).parent.parent.parent.absolute()
 with open(secrets_dir / "email_secrets.json") as json_file:
     secrets = json.load(json_file)
 nortek_jar_path = secrets["nortek_jar_path"]
+
+df = pd.read_csv("https://erddap.observations.voiceoftheocean.org/erddap/tabledap/ad2cp.csvp?url")
 
 def convert_from_ad2cp(dir_in, outfile, reprocess=False):
     _log.debug(f"looking for ad2cp files in {dir_in}")
@@ -33,7 +37,6 @@ def convert_from_ad2cp(dir_in, outfile, reprocess=False):
     with tempfile.TemporaryDirectory() as tmpdirname:
         _log.debug(f'created temporary directory {tmpdirname}')
         tmp_ad2cp = f"{tmpdirname}/{fn}"
-        tmp_nc = f"{tmpdirname}/{outfile.name}"
         shutil.copy(infile, tmp_ad2cp)
 
         subprocess.check_call(
@@ -45,12 +48,11 @@ def convert_from_ad2cp(dir_in, outfile, reprocess=False):
                 str(fn)
             ],
         )
-        out_clean = str(outfile).replace(".022.25.AD2CPRaw.00000", "")
-        shutil.copy(tmp_nc, out_clean)
+        tmp_nc = list(Path(tmpdirname).glob('*.nc'))[0]
+        shutil.copy(tmp_nc, outfile)
     _log.info(f"Converted {outfile}")
 
-
-def convert_ad2cp_to_nc(mission_dir):
+def convert_ad2cp_to_nc(mission_dir, upload_script="upload_adcp_erddap.sh", upload=True):
     _log.debug(f"copy ad2cp data for {mission_dir}")
     if "XXX" in str(mission_dir):
         return
@@ -61,18 +63,33 @@ def convert_ad2cp_to_nc(mission_dir):
         return
 
     dir_parts = list(mission_dir.parts)
-    dir_parts[4] = "3_Non_Processed"
+    dir_parts[-3] = "3_Non_Processed"
     source_dir = Path(*dir_parts) / "ADCP"
-    dir_parts[4] = "4_Processed"
-    destination_dir = Path(*dir_parts) / "ADCP"
+    dir_parts[-3] = "4_Processed"
+    destination_dir = Path(*dir_parts) / "ADCP_auto"
     glider_str, mission_str = dir_parts[-1].split("_")
     glider = int(glider_str[3:])
     mission = int(mission_str[1:])
     destination_file = destination_dir / f"SEA{str(glider).zfill(3)}_M{mission}.ad2cp"
-    nc_out_fn =  f"SEA{str(glider).zfill(3)}_M{mission}.ad2cp.022.25.AD2CPRaw.00000.nc"
+    nc_out_fn =  f"SEA{str(glider).zfill(3)}_M{mission}.ad2cp.00000.nc"
     nc_out_file = destination_dir / nc_out_fn
     if nc_out_file.exists():
-        _log.debug(f"destination file {nc_out_file} already exists")
+        _log.info(f"destination file {nc_out_file} already exists")
+        req = f"https://erddap.observations.voiceoftheocean.org/erddap/files/ad2cp/SEA0{glider}_M{mission}.ad2cp.00000.nc"
+        if req in df.url.values:
+            _log.info(f"destination file {nc_out_file} already on erddap")
+            return
+        subprocess.check_call(
+            [
+                "/usr/bin/bash",
+                str(sync_script_dir /upload_script),
+                str(glider),
+                str(mission),
+                str(nc_out_file),
+            ],
+        )
+        msg = f"uploaded ADCP data {nc_out_file} for SEA{glider} M{mission}"
+        mailer("uploaded ADCP", msg)
         return
     if not source_dir.exists():
         _log.error(f"No ADCP dir found {source_dir}")
@@ -90,11 +107,23 @@ def convert_ad2cp_to_nc(mission_dir):
     if not destination_file.exists():
         shutil.copy(source_file, destination_file)
     convert_from_ad2cp(destination_dir, nc_out_file)
+    if upload:
+        subprocess.check_call(
+            [
+                "/usr/bin/bash",
+                str(sync_script_dir /upload_script),
+                str(glider),
+                str(mission),
+                str(nc_out_file),
+            ],
+        )
+        msg = f"uploaded ADCP data {nc_out_file} for SEA{glider} M{mission}"
+        mailer("uploaded ADCP", msg)
 
 
 def convert_all_ad2cp():
     mission_list = list_missions(to_skip=skip_projects)
-    for mission_dir in mission_list[:2]:
+    for mission_dir in mission_list:
         convert_ad2cp_to_nc(mission_dir)
 
 if __name__ == '__main__':
