@@ -157,6 +157,9 @@ def sensor_sampling_period(glider, mission):
 
 
 def mailer(subject, message, recipient="callum.rollo@voiceoftheocean.org"):
+    if "callum" in str(sync_script_dir):
+        _log.error(f"Mock mail {subject}: {message} to {recipient}")
+        return
     _log.warning(f"email: {subject}, {message}, {recipient}")
     subject = subject.replace(" ", "-")
     send_script = sync_script_dir / "mailer.sh"
@@ -214,3 +217,5 @@ def add_standard_global_attrs(ds):
             continue
         ds.attrs[key] = val
     return ds
+if __name__ == '__main__':
+    mailer("a", "A", "a")
