@@ -108,6 +108,18 @@ def nan_bad_depths(ds):
 def nan_bad_locations(ds):
     ds["longitude"].values[ds["longitude_qc"] > 3] = np.nan
     ds["latitude"].values[ds["latitude_qc"] > 3] = np.nan
+    lat_to_m = 111 * 1000
+    lon_to_m = lat_to_m * np.cos(np.deg2rad(np.nanmean(ds.latitude.values)))
+    seconds = ds.time.diff(dim='time').values / np.timedelta64(1, 's')
+    speed_x = ds.longitude.diff(dim='time').values * lon_to_m / seconds
+    speed_y = ds.latitude.diff(dim='time').values * lat_to_m / seconds
+    speed = np.sqrt((speed_x ** 2 + speed_y ** 2))
+    threshold = 5  # max speed in m/s
+    for varname in ['longitude', 'latitude']:
+        ds[varname].values[:-1][speed > threshold] = np.nan
+        ds[varname].values[1:][speed > threshold] = np.nan
+        ds[varname].values[ds[varname].values < np.nanpercentile(ds[varname], 0.01) - 0.1] = np.nan
+        ds[varname].values[ds[varname].values > np.nanpercentile(ds[varname], 99.99) + 0.1] = np.nan
     return ds
 
 
