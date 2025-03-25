@@ -1,7 +1,7 @@
 import numpy as np
 import re
 from votoutils.glider.post_process_optics import betasw_ZHH2009
-from votoutils.utilities.geocode import filter_territorial_data
+from votoutils.utilities.geocode import filter_territorial_data, nan_bad_locations, flag_bad_locations, locs_to_seas
 from votoutils.glider.post_process_ctd import (
     salinity_pressure_correction,
     correct_rbr_lag,
@@ -104,22 +104,17 @@ def nan_bad_depths(ds):
     ds["pressure"][ds["pressure"] > int(ds["pressure"].attrs["valid_max"])] = np.nan
     return ds
 
-
-def nan_bad_locations(ds):
-    ds["longitude"].values[ds["longitude_qc"] > 3] = np.nan
-    ds["latitude"].values[ds["latitude_qc"] > 3] = np.nan
-    lat_to_m = 111 * 1000
-    lon_to_m = lat_to_m * np.cos(np.deg2rad(np.nanmean(ds.latitude.values)))
-    seconds = ds.time.diff(dim='time').values / np.timedelta64(1, 's')
-    speed_x = ds.longitude.diff(dim='time').values * lon_to_m / seconds
-    speed_y = ds.latitude.diff(dim='time').values * lat_to_m / seconds
-    speed = np.sqrt((speed_x ** 2 + speed_y ** 2))
-    threshold = 5  # max speed in m/s
-    for varname in ['longitude', 'latitude']:
-        ds[varname].values[:-1][speed > threshold] = np.nan
-        ds[varname].values[1:][speed > threshold] = np.nan
-        ds[varname].values[ds[varname].values < np.nanpercentile(ds[varname], 0.01) - 0.1] = np.nan
-        ds[varname].values[ds[varname].values > np.nanpercentile(ds[varname], 99.99) + 0.1] = np.nan
+def correct_locations(ds):
+    ds = flag_bad_locations(ds)
+    ds = nan_bad_locations(ds)
+    qc_good = np.logical_and(ds.longitude_qc == 1, ds.latitude_qc == 1)
+    lon = ds.longitude[qc_good].values
+    lat = ds.latitude[qc_good].values
+    ds.attrs["basin"] = locs_to_seas(lon[::10], lat[::10])
+    ds.attrs["geospatial_lon_min"] = np.nanmin(lon)
+    ds.attrs["geospatial_lon_max"] = np.nanmax(lon)
+    ds.attrs["geospatial_lat_min"] = np.nanmin(lat)
+    ds.attrs["geospatial_lat_max"] = np.nanmax(lat)
     return ds
 
 
@@ -133,7 +128,7 @@ def post_process(ds):
         ds = calculate_bbp(ds)
     ds = fix_variables(ds)
     ds = nan_bad_depths(ds)
-    ds = nan_bad_locations(ds)
+    ds = correct_locations(ds)
     ds = ds.sortby("time")
     _log.info("complete post process")
     return ds

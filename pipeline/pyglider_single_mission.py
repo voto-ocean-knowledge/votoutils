@@ -91,10 +91,10 @@ def process(glider, mission):
     )
     _log.info("Finished add to database")
 
-    from votoutils.ad2cp.ad2cp_proc import adcp_data_present
+    #from votoutils.ad2cp.ad2cp_proc import adcp_data_present
 
-    if adcp_data_present(glider, mission):
-        _log.info("TODO process adcp data")
+    #if adcp_data_present(glider, mission):
+        #_log.info("TODO process adcp data")
         # proc_gliderad2cp(glider, mission)
     update_processing_time(glider, mission, start)
 
