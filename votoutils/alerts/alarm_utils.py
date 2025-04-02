@@ -296,12 +296,7 @@ def surfacing_alerts(fake=True):
                 last_check = datetime.datetime.fromisoformat((line.strip()))
     else:
         last_check = datetime.datetime(1970, 1, 1)
-    # Write the time of this run
-    with open(timefile, "w") as f:
-        f.write(str(datetime.datetime.now()))
-    if not extra_alarm_numbers_surface:
-        _log.info("no one signed up for surfacing alerts")
-        return
+
     _log.info("Check for surfacing emails")
     # Check gmail account for emails
     mail = imaplib.IMAP4_SSL("imap.gmail.com")
@@ -333,6 +328,14 @@ def surfacing_alerts(fake=True):
                     )
                     if local_date > last_check:
                         unread_emails.append(i)
+                        last_check = local_date
+
+    # Write the time of the most recently received surfacing email
+    with open(timefile, "w") as f:
+        f.write(str(last_check))
+    if not extra_alarm_numbers_surface:
+        _log.info("no one signed up for surfacing alerts")
+        return
 
     # Exit if no new emails
     if not unread_emails:
