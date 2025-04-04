@@ -289,20 +289,6 @@ def datasets_to_emodnet(df_datasets):
             mailer("cherddap", msg)
 
 
-def adcp_proc_check(e):
-    adcp_datasets = pd.read_csv(
-        e.get_search_url(search_for="delayed adcp", response="csv"),
-    )["Dataset ID"]
-    dataset_id = adcp_datasets[np.random.randint(0, len(adcp_datasets) - 1)]
-    e.dataset_id = dataset_id
-    e.variables = ["time", "adcp_time"]
-    ds = e.to_xarray(requests_kwargs={"timeout": 300})
-    ds = ds.drop_dims("timeseries")
-    if len(np.unique(ds.adcp_time.values)) < 10000:
-        msg = f"bad adcp times for {dataset_id}"
-        mailer("cherddap", msg)
-
-
 def good_times():
     _log.warning("TODO: check times of all datetime like columns are in expected range")
     _log.warning(
@@ -345,7 +331,6 @@ def main():
     sensible_values(e, delayed[np.random.randint(0, num_ds - 1)])
     international_waters_check(e, "nrt_SEA067_M27")
     international_waters_check(e, nrt[np.random.randint(0, num_nrt - 1)])
-    adcp_proc_check(e)
     good_times()
     manual_qc()
 
