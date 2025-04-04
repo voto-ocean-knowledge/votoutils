@@ -2,82 +2,64 @@ from gliderad2cp import process_currents, process_shear, process_bias, tools
 import xarray as xr
 import numpy as np
 from pathlib import Path
-
-options = tools.get_options(
-    xaxis=1,
-    yaxis=3,
-    QC_correlation_threshold=80,
-    QC_amplitude_threshold=80,
-    QC_velocity_threshold=1.5,
-    velocity_dependent_shear_bias_correction=False,
-    shear_bias_regression_depth_slice=(10, 1000),
-)
+import subprocess
+options = tools.get_options(xaxis=1, yaxis=None, shear_bias_regression_depth_slice=(10,1000))
 
 
 def adcp_data_present(glider, mission):
-    raw_adcp_dir = Path(f"/data/data_raw/complete_mission/SEA{glider}/M{mission}/ADCP")
-    adcp_nc = raw_adcp_dir / f"sea{glider}_m{mission}_ad2cp.nc"
-    return adcp_nc.exists()
+    adcp_raw_dir = Path(f"/data/data_raw/complete_mission/SEA{glider}/M{mission}/ADCP")
+    adcp_file = adcp_raw_dir / f"SEA0{glider}_M{mission}.ad2cp.00000.nc"
+    return adcp_file.exists()
 
 
 def proc_gliderad2cp(glider, mission):
-    data_file = str(glider)
-    adcp_file = str(mission)
-    data_dir = adcp_file
-    ds_adcp = process_shear.process(adcp_file, data_file, options)
+    adcp_raw_dir = Path(f"/data/data_raw/complete_mission/SEA{glider}/M{mission}/ADCP")
+    if not adcp_raw_dir.exists():
+        adcp_raw_dir.mkdir()
+    adcp_file = adcp_raw_dir / f"SEA0{glider}_M{mission}.ad2cp.00000.nc"
+    if not adcp_file.exists():
+        subprocess.check_call(
+            [
+                "/usr/bin/rsync",
+                f'usrerddap@136.243.54.252:/data/ad2cp/SEA0{glider}_M{mission}.ad2cp.00000.nc',
+                str(adcp_file),
+            ],
+        )
+    data_dir = Path(f"/data/data_l0_pyglider/complete_mission/SEA{glider}/M{mission}")
+    data_file = data_dir / "timeseries" / "mission_timeseries.nc"
+    ds_adcp = process_shear.process(str(adcp_file), data_file, options)
 
     data = xr.open_dataset(data_file)
-    gps_predive = []
-    gps_postdive = []
+    dead = data.dead_reckoning
+    # Keep only data points with valid time, lon and lat
+    lon_lat_time = ~np.isnan(data.time) * ~np.isnan(data.longitude) * ~np.isnan(data.latitude)
+    dead = dead[lon_lat_time]
 
-    dives = np.round(np.unique(data.dive_num))
+    # dead reckoning 0 when lon/lat are from GPS fix. 1 when interpolated. Use the gradient of this to find
+    # where the glider starts & ends surface GPS fixes
+    dead_reckoning_post_change = dead[1:][dead.diff(dim='time') != 0]
+    post_dive = dead_reckoning_post_change[dead_reckoning_post_change == 0]
 
-    _idx = np.arange(len(data.dead_reckoning.values))
-    dr = np.sign(np.gradient(data.dead_reckoning.values))
+    dead_reckoning_pre_change = dead[:-1][dead.diff(dim='time', label='lower') != 0]
+    pre_dive = dead_reckoning_pre_change[dead_reckoning_pre_change == 0]
 
-    for dn in dives:
-        _gd = data.dive_num.values == dn
-        if all(np.unique(dr[_gd]) == 0):
-            continue
+    gps_predive = np.array([[time, lat, lon] for time, lat, lon in
+                   zip(pre_dive.time.values, pre_dive.latitude.values, pre_dive.longitude.values)])
+    gps_postdive = np.array([[time, lat, lon] for time, lat, lon in
+                    zip(post_dive.time.values, post_dive.latitude.values, post_dive.longitude.values)])
 
-        _post = -dr.copy()
-        _post[_post != 1] = np.nan
-        _post[~_gd] = np.nan
-
-        _pre = dr.copy()
-        _pre[_pre != 1] = np.nan
-        _pre[~_gd] = np.nan
-
-        if any(np.isfinite(_post)):
-            # The last -1 value is when deadreckoning is set to 0, ie. GPS fix. This is post-dive.
-            last = int(np.nanmax(_idx * _post))
-            gps_postdive.append(
-                np.array(
-                    [
-                        data.time[last].values,
-                        data.longitude[last].values,
-                        data.latitude[last].values,
-                    ]
-                ),
-            )
-
-        if any(np.isfinite(_pre)):
-            # The first +1 value is when deadreckoning is set to 1, the index before that is the last GPS fix. This is pre-dive.
-            first = int(np.nanmin(_idx * _pre)) - 1  # Note the -1 here.
-            gps_predive.append(
-                np.array(
-                    [
-                        data.time[first].values,
-                        data.longitude[first].values,
-                        data.latitude[first].values,
-                    ]
-                ),
-            )
-
-    gps_predive = np.vstack(gps_predive)
-    gps_postdive = np.vstack(gps_postdive)
+    dive_time_minutes = (post_dive.time.values - pre_dive.time.values) / np.timedelta64(1, 'h')
+    assert (dive_time_minutes > 0).all
+    assert 24 > np.mean(dive_time_minutes) > 0.5
     currents, DAC = process_currents.process(
         ds_adcp, gps_predive, gps_postdive, options
     )
     currents = process_bias.process(currents, options)
-    currents.to_netcdf(data_dir / f"SEA0{glider}_M{mission}_adcp_proc.nc")
+    out_dir = data_dir / "gliderad2cp"
+    if not out_dir.exists():
+        out_dir.mkdir(parents=True)
+    currents.to_netcdf(out_dir / f"SEA0{glider}_M{mission}_adcp_proc.nc")
+
+if __name__ == '__main__':
+    proc_gliderad2cp(45, 33)
+    proc_gliderad2cp(44, 98)
