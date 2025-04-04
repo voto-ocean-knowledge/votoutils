@@ -337,7 +337,7 @@ def main():
 
 if __name__ == "__main__":
     logging.basicConfig(
-        filename="/home/pipeline/log/cherrdap.log",
+        filename="/data/log/cherrdap.log",
         filemode="a",
         format="%(asctime)s %(levelname)-8s %(message)s",
         level=logging.INFO,
