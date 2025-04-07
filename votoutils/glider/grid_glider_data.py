@@ -2,6 +2,7 @@ import logging
 import xarray as xr
 import numpy as np
 import yaml
+import pandas as pd
 import scipy.stats as stats
 from pathlib import Path
 from votoutils.ad2cp.ad2cp_proc import adcp_data_present, proc_gliderad2cp
@@ -95,6 +96,8 @@ def make_gridfile_gliderad2cp(glider, mission, kind):
         dsout['time2'] = dsout['time']
         dsout = dsout.drop_vars('time')
         dsout = dsout.rename({'time2': 'time'})
+    else:
+        dsout['time'] = ('profile', pd.to_datetime(dsout.time.median(dim='depth').values), dsout.time.attrs)
 
     for var_name in ds.variables:
         if var_name in dsout.variables or var_name in dsout.dims:
