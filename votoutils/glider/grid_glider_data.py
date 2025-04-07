@@ -120,6 +120,7 @@ def make_gridfile_gliderad2cp(glider, mission, kind):
 
     if len(dsout.time.dims) == 2:
         dsout['time'] = ('profile', pd.to_datetime(dsout.time.median(dim='depth').values), dsout.time.attrs)
+        dsout = dsout.assign_coords(time=("time", dsout.time.values))
 
     dsout.attrs = ds.attrs
     dsout.attrs.pop('cdm_data_type')
