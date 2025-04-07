@@ -174,4 +174,4 @@ def proc_pyglider_l0(glider, mission, kind, input_dir, output_dir):
         from votoutils.ad2cp.ad2cp_proc import adcp_data_present, proc_gliderad2cp
         if adcp_data_present(glider, mission):
             proc_gliderad2cp(glider, mission)
-    grid_glider_data.make_gridfile_gliderad2cp(glider, mission)
+    grid_glider_data.make_gridfile_gliderad2cp(glider, mission, kind)

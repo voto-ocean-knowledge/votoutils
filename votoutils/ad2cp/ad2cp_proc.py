@@ -61,5 +61,5 @@ def proc_gliderad2cp(glider, mission):
     currents.to_netcdf(out_dir / f"SEA0{glider}_M{mission}_adcp_proc.nc")
 
 if __name__ == '__main__':
-    proc_gliderad2cp(45, 33)
+    proc_gliderad2cp(55, 85)
     proc_gliderad2cp(44, 98)

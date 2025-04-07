@@ -43,7 +43,7 @@ def gappy_fill_vertical(data):
     return data
 
 
-def make_gridfile_gliderad2cp(glider, mission):
+def make_gridfile_gliderad2cp(glider, mission, kind):
     """
     Turn a timeseries netCDF file into a vertically gridded netCDF. Adds ad2cp data if present
 
@@ -61,8 +61,12 @@ def make_gridfile_gliderad2cp(glider, mission):
     """
 
 
-    inname = f"/data/data_l0_pyglider/complete_mission/SEA{str(glider)}/M{str(mission)}/timeseries/mission_timeseries.nc"
-    outdir = Path(f"/data/data_l0_pyglider/complete_mission/SEA{str(glider)}/M{str(mission)}/gridfiles/")
+    if kind=='sub':
+        infix = 'nrt'
+    else:
+        infix = 'complete_mission'
+    inname = f"/data/data_l0_pyglider/{infix}/SEA{str(glider)}/M{str(mission)}/timeseries/mission_timeseries.nc"
+    outdir = Path(f"/data/data_l0_pyglider/{infix}/SEA{str(glider)}/M{str(mission)}/gridfiles/")
     outname = outdir / 'gridded.nc'
     if not outdir.exists():
         outdir.mkdir(parents=True)
@@ -78,10 +82,11 @@ def make_gridfile_gliderad2cp(glider, mission):
 
     dsout["depth"].attrs = {"units": 'm', 'description': 'Central measurement depth in meters.'}
     dsout["profile"].attrs = {"units": '', 'description': 'Central profile number of measurement.'}
-    if adcp_data_present(glider, mission) or True:
-        proc_gliderad2cp(glider, mission)
+    if adcp_data_present(glider, mission):
         dsout = xr.open_dataset(
             f"/data/data_l0_pyglider/complete_mission/SEA{glider}/M{mission}/gliderad2cp/SEA0{glider}_M{mission}_adcp_proc.nc")
+        if not  dsout.exists():
+            proc_gliderad2cp(glider, mission)
         dsout = dsout.rename_dims({'profile_index': 'profile'})
         dsout['profile'] = dsout['profile_index'].copy()
         dsout = dsout.drop_vars('profile_index')
@@ -143,6 +148,21 @@ def make_gridfile_gliderad2cp(glider, mission):
         else:
             dsout[var_name].attrs['coverage_content_type'] = 'physicalMeasurement'
 
+     # Cut gridded data down to actual extent
+    _log.info(f'Check depth extent. Originally {dsout.depth.min()} - {dsout.depth.max()} m')
+    vmin = 0
+    vmax = 0
+    for variable in dsout.variables:
+        if len(dsout[variable].dims) != 2:
+            continue
+        if 'bias' in variable:
+            continue
+        var_sum = np.sum(~np.isnan(dsout[variable].data), axis=1)
+        valid_depths = dsout[variable].depth.data[var_sum != 0.0]
+        _log.info(f"{variable}: {valid_depths.min()} - {valid_depths.max()} m")
+        vmax = max((vmax, valid_depths.max()))
+    _log.info(f'cutting down to {vmin} - {vmax} m depth')
+    dsout = dsout.sel(depth=slice(vmin, vmax+2))
 
     _log.info('Writing %s', outname)
     dsout.to_netcdf(
@@ -154,4 +174,4 @@ def make_gridfile_gliderad2cp(glider, mission):
 if __name__ == '__main__':
     glider = 55
     mission = 85
-    make_gridfile_gliderad2cp(glider, mission)
+    make_gridfile_gliderad2cp(glider, mission, 'raw')
