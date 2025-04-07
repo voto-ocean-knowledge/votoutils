@@ -80,7 +80,6 @@ def process(glider, mission):
     _log.info(f"Processing glider {glider} mission {mission}")
     proc_pyglider_l0(glider, mission, "raw", input_dir, output_dir)
     _log.info(f"Finished processing glider {glider} mission {mission}")
-
     sys.path.append(str(parent_dir / "voto-web/voto/bin"))
     # noinspection PyUnresolvedReferences
     from add_profiles import init_db, add_complete_profiles
@@ -91,11 +90,7 @@ def process(glider, mission):
     )
     _log.info("Finished add to database")
 
-    #from votoutils.ad2cp.ad2cp_proc import adcp_data_present
 
-    #if adcp_data_present(glider, mission):
-        #_log.info("TODO process adcp data")
-        # proc_gliderad2cp(glider, mission)
     update_processing_time(glider, mission, start)
 
     sys.path.append(str(parent_dir / "quick-plots"))

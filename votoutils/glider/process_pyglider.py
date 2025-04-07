@@ -6,6 +6,8 @@ import yaml
 import numpy as np
 import polars as pl
 import xarray as xr
+
+from votoutils.glider import grid_glider_data
 from votoutils.glider.pre_process import clean_infiles
 from votoutils.utilities.geocode import get_seas_merged_nav_nc
 from votoutils.glider.post_process_dataset import post_process
@@ -168,5 +170,9 @@ def proc_pyglider_l0(glider, mission, kind, input_dir, output_dir):
     ds = set_profile_numbers(ds)
     ds = encode_times(ds)
     ds.to_netcdf(outname)
-
+    if kind=='raw':
+        from votoutils.ad2cp.ad2cp_proc import adcp_data_present, proc_gliderad2cp
+        if adcp_data_present(glider, mission):
+            proc_gliderad2cp(glider, mission)
+    grid_glider_data.make_gridfile_gliderad2cp(glider, mission)
     ncprocess.make_L0_gridfiles(outname, griddir, deploymentyaml)

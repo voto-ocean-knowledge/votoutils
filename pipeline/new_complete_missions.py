@@ -45,9 +45,6 @@ def main():
 
         glider_paths_good.append(mission_paths)
     glider_paths_good = [item for sublist in glider_paths_good for item in sublist]
-    if len(glider_paths_good) == len(df_reprocess):
-        _log.info("No new missions to process")
-        return
     for mission_path in glider_paths_good:
         glider = int(mission_path.parts[-2][3:])
         mission = int(mission_path.parts[-1][1:])
