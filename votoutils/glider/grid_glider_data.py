@@ -96,8 +96,6 @@ def make_gridfile_gliderad2cp(glider, mission, kind):
         dsout['time2'] = dsout['time']
         dsout = dsout.drop_vars('time')
         dsout = dsout.rename({'time2': 'time'})
-    else:
-        dsout['time'] = ('profile', pd.to_datetime(dsout.time.median(dim='depth').values), dsout.time.attrs)
 
     for var_name in ds.variables:
         if var_name in dsout.variables or var_name in dsout.dims:
@@ -120,7 +118,8 @@ def make_gridfile_gliderad2cp(glider, mission, kind):
                            ds[var_name].attrs
                       )
 
-
+    if len(dsout.time.dims) == 2:
+        dsout['time'] = ('profile', pd.to_datetime(dsout.time.median(dim='depth').values), dsout.time.attrs)
 
     dsout.attrs = ds.attrs
     dsout.attrs.pop('cdm_data_type')
