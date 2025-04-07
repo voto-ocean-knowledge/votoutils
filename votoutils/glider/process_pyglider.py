@@ -175,4 +175,3 @@ def proc_pyglider_l0(glider, mission, kind, input_dir, output_dir):
         if adcp_data_present(glider, mission):
             proc_gliderad2cp(glider, mission)
     grid_glider_data.make_gridfile_gliderad2cp(glider, mission)
-    ncprocess.make_L0_gridfiles(outname, griddir, deploymentyaml)

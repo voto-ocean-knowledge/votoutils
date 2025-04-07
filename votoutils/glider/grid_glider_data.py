@@ -1,7 +1,6 @@
 import logging
 import xarray as xr
 import numpy as np
-import os
 import yaml
 import scipy.stats as stats
 from pathlib import Path
@@ -64,7 +63,7 @@ def make_gridfile_gliderad2cp(glider, mission):
 
     inname = f"/data/data_l0_pyglider/complete_mission/SEA{str(glider)}/M{str(mission)}/timeseries/mission_timeseries.nc"
     outdir = Path(f"/data/data_l0_pyglider/complete_mission/SEA{str(glider)}/M{str(mission)}/gridfiles/")
-    outname = outdir / 'gridded_gliderad2cp.nc'
+    outname = outdir / 'gridded.nc'
     if not outdir.exists():
         outdir.mkdir(parents=True)
 
@@ -75,16 +74,18 @@ def make_gridfile_gliderad2cp(glider, mission):
     xi = np.arange(np.nanmin(ds.profile_num.values), np.nanmax(ds.profile_num.values) + xi, xi)
     yi = np.arange(0, np.nanmax(np.nanmax(ds.depth)) + yi, yi)
     # Create structure
-    dsout = xr.Dataset(coords={"depth": yi, "profile_index": xi})
+    dsout = xr.Dataset(coords={"depth": yi, "profile": xi})
 
     dsout["depth"].attrs = {"units": 'm', 'description': 'Central measurement depth in meters.'}
-    dsout["profile_index"].attrs = {"units": '', 'description': 'Central profile number of measurement.'}
+    dsout["profile"].attrs = {"units": '', 'description': 'Central profile number of measurement.'}
     if adcp_data_present(glider, mission) or True:
-        outname = outdir / 'gridded_adcp_gliderad2cp.nc'
         proc_gliderad2cp(glider, mission)
         dsout = xr.open_dataset(
             f"/data/data_l0_pyglider/complete_mission/SEA{glider}/M{mission}/gliderad2cp/SEA0{glider}_M{mission}_adcp_proc.nc")
-        xi = dsout.profile_index.values
+        dsout = dsout.rename_dims({'profile_index': 'profile'})
+        dsout['profile'] = dsout['profile_index'].copy()
+        dsout = dsout.drop_vars('profile_index')
+        xi = dsout.profile.values
         yi = dsout.depth.values
         dsout['time2'] = dsout['time']
         dsout = dsout.drop_vars('time')
@@ -105,7 +106,7 @@ def make_gridfile_gliderad2cp(glider, mission):
         else:
             average_method = "median"
         good = np.where(~np.isnan(ds[var_name]) & (ds['profile_index'] % 1 == 0))[0]
-        dsout[var_name] = (('depth', 'profile_index'),
+        dsout[var_name] = (('depth', 'profile'),
                        grid2d(ds.profile_num.values[good], ds.depth.values[good],
                          ds[var_name].values[good], xi=xi, yi=yi, fn=average_method)[0],
                            ds[var_name].attrs
@@ -133,11 +134,11 @@ def make_gridfile_gliderad2cp(glider, mission):
     # see H.6.2. Profiles along a single trajectory
     # https://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/aphs06.html
     dsout.attrs['featureType'] = 'trajectoryProfile'
-    dsout['profile_index'].attrs['cf_role'] = 'profile_id'
+    dsout['profile'].attrs['cf_role'] = 'profile_id'
     dsout['mission_number'] = np.int32(1)
     dsout['mission_number'].attrs['cf_role'] = 'trajectory_id'
     for var_name in dsout:
-        if var_name in ['profile_index', 'depth',  'mission_number']:
+        if var_name in ['profile', 'depth',  'mission_number']:
             dsout[var_name].attrs['coverage_content_type'] = 'coordinate'
         else:
             dsout[var_name].attrs['coverage_content_type'] = 'physicalMeasurement'
