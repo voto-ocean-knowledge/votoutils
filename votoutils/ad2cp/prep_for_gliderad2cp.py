@@ -86,15 +86,16 @@ def convert_ad2cp_to_nc(
         if req in df.url.values:
             _log.info(f"destination file {nc_out_file} already on erddap")
             return
-        subprocess.check_call(
-            [
-                "/usr/bin/bash",
-                str(sync_script_dir / upload_script),
-                str(glider),
-                str(mission),
-                str(nc_out_file),
-            ],
-        )
+        for script in ["upload_adcp.sh", upload_script]:
+            subprocess.check_call(
+                [
+                    "/usr/bin/bash",
+                    str(sync_script_dir / script),
+                    str(glider),
+                    str(mission),
+                    str(nc_out_file),
+                ],
+            )
         msg = f"uploaded ADCP data {nc_out_file} for SEA{glider} M{mission}"
         mailer("uploaded ADCP", msg)
         return
