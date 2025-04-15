@@ -15,12 +15,14 @@ _log = logging.getLogger(__name__)
 
 
 def main():
-    location_files = list(Path("/mnt/samba/").glob("*/5_Calibration/CTD/*cation*.txt"))
+    location_files = list(Path("/mnt/samba/").glob("*/5_Calibration/CTD/*cation*.txt")) + list(Path("/mnt/samba/").glob("*/*/5_Calibration/CTD/*cation*.txt"))
     missing_ctd_files = []
     casts = []
     fn = 0
     cnv_files = list(Path("/mnt/samba/").glob("*/5_Calibration/*/*SBE09*.cnv*")) + list(
         Path("/mnt/samba/").glob("*/5_Calibration/*/*SBE19*EDITED*.cnv*"),
+    ) + list(Path("/mnt/samba/").glob("*/*/5_Calibration/*/*SBE09*.cnv*")) + list(
+        Path("/mnt/samba/").glob("*/*/5_Calibration/*/*SBE19*EDITED*.cnv*"),
     )
     for filename in cnv_files:
         _log.info(f"Start add cnv {filename}")
@@ -34,6 +36,7 @@ def main():
         fn += 1
     df_all_locs = pd.DataFrame()
     for locfile in location_files:
+        _log.info(f"Start location file {locfile}")
         df_loc = pd.read_csv(locfile, sep=";")
         df_loc["fn"] = locfile
         df_all_locs = pd.concat((df_all_locs, df_loc))
@@ -43,7 +46,9 @@ def main():
         missing_ctd_files = filenames_match(locfile, missing_files=missing_ctd_files)
         for ctd_csv in csv_files:
             _log.info(f"Start add {ctd_csv}")
-            casts.append(read_ctd(ctd_csv, locfile))
+            df = read_ctd(ctd_csv, locfile)
+            if not df.empty:
+                casts.append(df)
             _log.info(f"Added {ctd_csv}")
             fn += 1
     # renumber profiles, so that profile_num still is unique in concat-dataset
@@ -73,8 +78,9 @@ def main():
             "usrerddap@136.243.54.252:/data/ctd/ctd_deployment.nc",
         ],
     )
-    if not len(df_all_locs) != len(df_all_locs["File"].unique()):
-        mailer("bad-ctd-locfiles", "duplicate entries accross ctd location files")
+    if len(df_all_locs) != len(df_all_locs["File"].unique()):
+        dupes = df_all_locs[df_all_locs.duplicated(subset=['File'], keep=False)]
+        mailer("bad-ctd-locfiles", f"duplicate entries accross ctd location files, {dupes}")
 
     if len(missing_ctd_files) > 0:
         mailer(
