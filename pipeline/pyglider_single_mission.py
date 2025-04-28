@@ -20,6 +20,10 @@ os.chdir(script_dir)
 
 _log = logging.getLogger(__name__)
 
+blocked_missions = [
+    ["SEA079", 29],
+    ["SEA057", 75],
+                    ]
 
 def remove_proc_files(platform_serial, mission):
     rawnc_dir = pathlib.Path(
@@ -57,6 +61,8 @@ def update_processing_time(platform_serial, mission, start):
 
 
 def process(platform_serial, mission):
+    if [platform_serial, mission] in blocked_missions:
+        _log.info(f"Will not process {platform_serial}, M{mission} as it is in blocked_missions")
     if len(platform_serial) < 4:
         platform_serial = f"SEA{platform_serial}"
 

@@ -28,7 +28,7 @@ def main():
     else:
         df_reprocess = pd.DataFrame(
             {
-                "glider": [55],
+                "glider": ["SEA055"],
                 "mission": [16],
                 "proc_time": [datetime.datetime(1970, 1, 1)],
                 "duration": [datetime.timedelta(minutes=10)],
@@ -39,14 +39,12 @@ def main():
     glider_paths = list(pathlib.Path("/data/data_raw/complete_mission").glob("SEA*"))
     glider_paths_good = []
     for path in glider_paths:
-        if "SEA57" in str(path):
-            continue
         mission_paths = path.glob("M*")
 
         glider_paths_good.append(mission_paths)
     glider_paths_good = [item for sublist in glider_paths_good for item in sublist]
     for mission_path in glider_paths_good:
-        glider = int(mission_path.parts[-2][3:])
+        glider = mission_path.parts[-2]
         mission = int(mission_path.parts[-1][1:])
         a = [
             np.logical_and(
