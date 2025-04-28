@@ -221,6 +221,8 @@ def flag_ioos(ds):
 
 
 def flag_oxygen(ds):
+    if 'oxygen' not in list(ds):
+        return ds
     oxy_meta_str = ds.oxygen
     import ast
 
@@ -245,9 +247,9 @@ def flag_oxygen(ds):
 
 def flag_pilot(ds):
     attrs = ds.attrs
-    glider = attrs["glider_serial"]
+    platform_serial = attrs["glider_serial"]
     mission = attrs["deployment_id"]
-    mission_yaml = f"/data/deployment_yaml/mission_yaml/SEA{glider}_M{mission}.yml"
+    mission_yaml = f"/data/deployment_yaml/mission_yaml/{platform_serial}_M{mission}.yml"
     with open(mission_yaml) as fin:
         deployment = yaml.safe_load(fin)
     if "qc" not in deployment.keys():

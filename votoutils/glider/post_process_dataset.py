@@ -89,7 +89,7 @@ def process_altimeter(ds):
 
 def fix_variables(ds):
     attrs = ds.attrs
-    if int(attrs["glider_serial"]) == 69 and int(attrs["deployment_id"]) == 15:
+    if attrs["platform_serial"] == "SEA069" and int(attrs["deployment_id"]) == 15:
         _log.info("correcting phycocyanin values for SEA69 M15")
         ds["phycocyanin"].values = ds["phycocyanin"].values * 0.1
         ds.phycocyanin.attrs["comment"] += (

@@ -460,7 +460,7 @@ sensor_vocabs = {
         "sensor_maker": "RBR",
         "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0049/",
         "sensor_model": "RBRtridente: three-channel fluorescence and backscatter sensor",
-        "sensor_model_vocabulary": "TBA",
+        "sensor_model_vocabulary": "http://vocab.nerc.ac.uk/collection/L22/current/TOOL2149/",
         "long_name": "RBR Tridente",
     },
     "Nortek AD2CP": {

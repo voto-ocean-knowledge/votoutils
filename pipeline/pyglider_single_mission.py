@@ -21,21 +21,21 @@ os.chdir(script_dir)
 _log = logging.getLogger(__name__)
 
 
-def remove_proc_files(glider, mission):
+def remove_proc_files(platform_serial, mission):
     rawnc_dir = pathlib.Path(
-        f"/data/data_l0_pyglider/complete_mission/SEA{glider}/M{mission}/rawnc",
+        f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}/rawnc",
     )
     if rawnc_dir.exists():
         shutil.rmtree(rawnc_dir)
     return
 
 
-def update_processing_time(glider, mission, start):
+def update_processing_time(platform_serial, mission, start):
     df_reprocess = pd.read_csv(
         "/home/pipeline/reprocess.csv",
         parse_dates=["proc_time"],
     )
-    a = [np.logical_and(df_reprocess.glider == glider, df_reprocess.mission == mission)]
+    a = [np.logical_and(df_reprocess.glider == platform_serial, df_reprocess.mission == mission)]
     if df_reprocess.index[tuple(a)].any():
         ind = df_reprocess.index[tuple(a)].values[0]
         df_reprocess.at[ind, "proc_time"] = datetime.datetime.now()
@@ -43,7 +43,7 @@ def update_processing_time(glider, mission, start):
     else:
         new_row = pd.DataFrame(
             {
-                "glider": glider,
+                "glider": platform_serial,
                 "mission": mission,
                 "proc_time": datetime.datetime.now(),
                 "duration": datetime.datetime.now() - start,
@@ -56,8 +56,11 @@ def update_processing_time(glider, mission, start):
     df_reprocess.to_csv("/home/pipeline/reprocess.csv", index=False)
 
 
-def process(glider, mission):
-    logf = f"/data/log/complete_mission/SEA{str(glider)}_M{str(mission)}.log"
+def process(platform_serial, mission):
+    if len(platform_serial) < 4:
+        platform_serial = f"SEA{platform_serial}"
+
+    logf = f"/data/log/complete_mission/{platform_serial}_M{str(mission)}.log"
     logging.basicConfig(
         filename=logf,
         filemode="w",
@@ -66,10 +69,10 @@ def process(glider, mission):
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     start = datetime.datetime.now()
-    input_dir = f"/data/data_raw/complete_mission/SEA{glider}/M{mission}/"
+    input_dir = f"/data/data_raw/complete_mission/{platform_serial}/M{mission}/"
     if not input_dir:
         raise ValueError(f"Input dir {input_dir} not found")
-    output_dir = f"/data/data_l0_pyglider/complete_mission/SEA{glider}/M{mission}/"
+    output_dir = f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}/"
 
     in_files_gli = natural_sort(glob.glob(f"{input_dir}*gli*.gz"))
     in_files_pld = natural_sort(glob.glob(f"{input_dir}*pld1.raw*.gz"))
@@ -77,44 +80,44 @@ def process(glider, mission):
 
     if len(in_files_gli) == 0 or len(in_files_pld) == 0:
         raise ValueError(f"input dir {input_dir} does not contain gli and/or pld files")
-    _log.info(f"Processing glider {glider} mission {mission}")
-    proc_pyglider_l0(glider, mission, "raw", input_dir, output_dir)
-    _log.info(f"Finished processing glider {glider} mission {mission}")
+    _log.info(f"Processing glider {platform_serial} mission {mission}")
+    proc_pyglider_l0(platform_serial, mission, "raw", input_dir, output_dir)
+    _log.info(f"Finished processing glider{platform_serial} mission {mission}")
     sys.path.append(str(parent_dir / "voto-web/voto/bin"))
     # noinspection PyUnresolvedReferences
     from add_profiles import init_db, add_complete_profiles
 
     init_db()
     add_complete_profiles(
-        pathlib.Path(f"/data/data_l0_pyglider/complete_mission/SEA{glider}/M{mission}"),
+        pathlib.Path(f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}"),
     )
     _log.info("Finished add to database")
 
-
-    update_processing_time(glider, mission, start)
+    update_processing_time(platform_serial, mission, start)
 
     sys.path.append(str(parent_dir / "quick-plots"))
     # noinspection PyUnresolvedReferences
     from complete_mission_plots import complete_plots
-
-    complete_plots(glider, mission)
+    complete_plots(platform_serial, mission)
     _log.info("Finished plot creation")
 
     subprocess.check_call(
         [
             "/usr/bin/bash",
             sync_script_dir / "send_to_erddap.sh",
-            str(glider),
+            str(platform_serial),
             str(mission),
         ],
     )
     _log.info("Sent file to erddap")
 
-    remove_proc_files(glider, mission)
+    remove_proc_files(platform_serial, mission)
     _log.info("Finished processing")
 
 
 if __name__ == "__main__":
+    process("SHW001", 34)
+def fo():
     parser = argparse.ArgumentParser(description="process SX files with pyglider")
     parser.add_argument("glider", type=int, help="glider number, e.g. 70")
     parser.add_argument("mission", type=int, help="Mission number, e.g. 23")

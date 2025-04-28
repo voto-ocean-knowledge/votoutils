@@ -27,9 +27,11 @@ def convert_from_ad2cp(dir_in, outfile, reprocess=False):
     ad2cp_files = list(Path(dir_in).glob("*.ad2cp"))
     if len(ad2cp_files) == 0:
         _log.error(f"no input ad2cp files in {dir_in}")
+        mailer("No ad2cp", f"no input ad2cp files in {dir_in}")
         return
     elif len(ad2cp_files) > 1:
         _log.error(f"multiple input ad2cp files in {dir_in}")
+        mailer("Multuiple ad2cp", f"multiple input ad2cp files in {dir_in}")
         return
     infile = ad2cp_files[0]
     fn = infile.name
@@ -100,14 +102,20 @@ def convert_ad2cp_to_nc(
         mailer("uploaded ADCP", msg)
         return
     if not source_dir.exists():
-        _log.error(f"No ADCP dir found {source_dir}")
+        msg = f"No ADCP dir found {source_dir}"
+        mailer("ADCP error", msg)
+        _log.error(msg)
         return
     source_files = list(source_dir.glob(f"*{glider}*{mission}*ad2cp"))
     if len(source_files) == 0:
-        _log.error(f"no input ad2cp files in {source_dir}")
+        msg = f"no input ad2cp files in {source_dir}"
+        mailer("ADCP error", msg)
+        _log.error(msg)
         return
     elif len(source_files) > 1:
-        _log.error(f"multiple input ad2cp files in {source_dir}")
+        msg =f"multiple input ad2cp files in {source_dir}"
+        mailer("ADCP error", msg)
+        _log.error(msg)
         return
     source_file = source_files[0]
     if not destination_dir.exists():
@@ -116,15 +124,16 @@ def convert_ad2cp_to_nc(
         shutil.copy(source_file, destination_file)
     convert_from_ad2cp(destination_dir, nc_out_file)
     if upload:
-        subprocess.check_call(
-            [
-                "/usr/bin/bash",
-                str(sync_script_dir / upload_script),
-                str(glider),
-                str(mission),
-                str(nc_out_file),
-            ],
-        )
+        for script in ["upload_adcp.sh", upload_script]:
+            subprocess.check_call(
+                [
+                    "/usr/bin/bash",
+                    str(sync_script_dir / script),
+                    str(glider),
+                    str(mission),
+                    str(nc_out_file),
+                ],
+            )
         msg = f"uploaded ADCP data {nc_out_file} for SEA{glider} M{mission}"
         mailer("uploaded ADCP", msg)
 
