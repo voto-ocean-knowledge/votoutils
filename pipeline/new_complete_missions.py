@@ -44,21 +44,21 @@ def main():
         glider_paths_good.append(mission_paths)
     glider_paths_good = [item for sublist in glider_paths_good for item in sublist]
     for mission_path in glider_paths_good:
-        glider = mission_path.parts[-2]
+        platform_serial = mission_path.parts[-2]
         mission = int(mission_path.parts[-1][1:])
         a = [
             np.logical_and(
-                df_reprocess.glider == glider,
+                df_reprocess.glider == platform_serial,
                 df_reprocess.mission == mission,
             ),
         ]
         if not sum(sum(a)):
             _log.warning(f"new mission {mission_path}")
-            process(glider, mission)
+            process(platform_serial, mission)
             nc_file = list(
                 (
                     pathlib.Path(
-                        f"/data/data_l0_pyglider/complete_mission/SEA{glider}/M{mission}/timeseries",
+                        f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}/timeseries",
                     )
                 ).glob("*.nc"),
             )[0]
@@ -66,7 +66,7 @@ def main():
             nc_time = datetime.datetime.fromtimestamp(nc_time)
             new_row = pd.DataFrame(
                 {
-                    "glider": glider,
+                    "glider": platform_serial,
                     "mission": mission,
                     "proc_time": nc_time,
                     "duration": datetime.timedelta(minutes=20),

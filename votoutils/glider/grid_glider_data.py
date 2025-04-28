@@ -83,7 +83,7 @@ def make_gridfile_gliderad2cp(platform_serial, mission, kind):
 
     dsout["depth"].attrs = {"units": 'm', 'description': 'Central measurement depth in meters.'}
     dsout["profile"].attrs = {"units": '', 'description': 'Central profile number of measurement.'}
-    if adcp_data_present(platform_serial, mission):
+    if adcp_data_present(platform_serial, mission) and kind!='sub':
         adcp_file = Path(f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}/gliderad2cp/{platform_serial}_M{mission}_adcp_proc.nc")
         if not adcp_file.exists():
             proc_gliderad2cp(platform_serial, mission)
