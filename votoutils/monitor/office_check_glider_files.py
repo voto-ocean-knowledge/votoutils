@@ -3,30 +3,29 @@ import pandas as pd
 from itertools import chain
 import subprocess
 from votoutils.utilities.utilities import mailer
+from votoutils.upload.sync_functions import sync_script_dir
 
+explained_missions = [('SEA067', 15),
+ ('SEA061', 63),
+ ('SEA056', 27),
+ ('SEA066', 31),
+ ('SEA045', 58),
+ ('SEA061', 48),
+ ('SEA045', 37),
+ ('SEA045', 54),
+ ('SEA044', 48),
+ ('SEA055', 16),
+ ('SEA063', 40),
+ ('SEA066', 45),
+ ('SEA045', 74),
+ ('SEA066', 50),
+ ('SEA055', 81),
+ ('SEA044', 23),
+ ('SEA056', 22),
+ ('SEA044', 43),
+                      ]
 
-explained_missions = (
-    (67, 15),
-    (61, 63),
-    (56, 27),
-    (66, 31),
-    (45, 58),
-    (61, 48),
-    (45, 37),
-    (45, 54),
-    (44, 48),
-    (55, 16),
-    (63, 40),
-    (66, 45),
-    (45, 74),
-    (66, 50),
-    (55, 81),
-    (44, 23),
-    (56, 22),
-    (44, 43),
-)
-
-expected_missmatch = ((55, 87),)
+expected_missmatch = (("SEA055", 87),)
 
 skip_projects = [
     "1_Folder_Template",
@@ -50,9 +49,8 @@ def erddap_download():
     erddap_missions = []
     for mission_str in complete_glider_missions:
         __, glider_str, mission_str = mission_str.split("_")
-        glider = int(glider_str[3:])
         mission = int(mission_str[1:])
-        erddap_missions.append((glider, mission))
+        erddap_missions.append((glider_str, mission))
     return erddap_missions
 
 
@@ -60,8 +58,7 @@ def good_mission(
     download_mission_path,
     processed_missions,
     explained=(),
-    upload_script="upload.sh",
-):
+    upload_script=sync_script_dir / "upload.sh"):
     if "XXX" in str(download_mission_path):
         return
     parts = list(download_mission_path.parts)
@@ -71,13 +68,13 @@ def good_mission(
     glidermission = mission_path.parts[-1]
     try:
         glider_str, mission_str = glidermission.split("_")
-        glider = int(glider_str[3:])
+        platform_serial = glider_str
         mission = int(mission_str[1:])
     except ValueError:
         print(f"Could not proc {pretty_mission}")
         return
-    if (glider, mission) in explained:
-        print(f"known bad mission {glider, mission}. Skipping")
+    if (platform_serial, mission) in explained:
+        print(f"known bad mission {platform_serial} M{mission}. Skipping")
         return
     if not mission_path.is_dir():
         msg = f"Downloaded but not processed {pretty_mission}"
@@ -93,18 +90,18 @@ def good_mission(
         msg = f"no nav, {pretty_mission}"
         mailer("mission not processed", msg)
         return
-    pld_files = list(pld_path.glob(f"sea{str(glider).zfill(3)}.{mission}.pld1.raw*"))
-    nav_files = list(nav_path.glob(f"sea{str(glider).zfill(3)}.{mission}.gli.sub*"))
+    pld_files = list(pld_path.glob(f"{platform_serial.lower()}.{mission}.pld1.raw*"))
+    nav_files = list(nav_path.glob(f"{platform_serial.lower()}.{mission}.gli.sub*"))
     if len(pld_files) == 0 or len(nav_files) == 0:
         msg = f"No matching files {pretty_mission} "
         mailer("mission not processed", msg)
         return
     missmatch = abs(len(pld_files) - len(nav_files))
-    if missmatch > 50 and (glider, mission) not in expected_missmatch:
+    if missmatch > 50 and (platform_serial, mission) not in expected_missmatch:
         msg = f"Missmatch {len(nav_files)} nav files vs {len(pld_files)} pld files {pretty_mission}"
         mailer("mission not processed", msg)
         return
-    if (glider, mission) not in processed_missions:
+    if (platform_serial, mission) not in processed_missions:
         msg = f"Not processed {pretty_mission}"
         mailer("mission not processed", msg)
 
@@ -113,9 +110,9 @@ def good_mission(
                 [
                     "/usr/bin/bash",
                     upload_script,
-                    str(glider),
+                    str(platform_serial),
                     str(mission),
-                    mission_path,
+                    str(mission_path),
                 ],
             )
             msg = f"uploaded raw data for {pretty_mission}"
@@ -137,7 +134,7 @@ def list_missions(to_skip=()):
             continue
         non_proc = proj / "1_Downloaded"
         if non_proc.is_dir():
-            proj_glider_dirs = non_proc.glob("SEA*")
+            proj_glider_dirs = non_proc.glob("S*")
             glider_dirs.append(list(proj_glider_dirs))
             continue
         sub_dirs = proj.glob("*")
@@ -148,14 +145,14 @@ def list_missions(to_skip=()):
                     if skip in str(non_proc):
                         print(f"skipping {skip}")
                         continue
-                proj_glider_dirs = non_proc.glob("SEA*")
+                proj_glider_dirs = non_proc.glob("S*")
                 glider_dirs.append(list(proj_glider_dirs))
 
     glider_dirs = list(chain(*glider_dirs))
 
     all_mission_paths = []
     for glider_dir in glider_dirs:
-        mission_dirs = list(glider_dir.glob("SEA*"))
+        mission_dirs = list(glider_dir.glob("S*"))
         all_mission_paths.append(mission_dirs)
     all_mission_paths = list(chain(*all_mission_paths))
     good_missions = []
