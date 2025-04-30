@@ -122,10 +122,8 @@ def process(platform_serial, mission):
 
 
 if __name__ == "__main__":
-    process("SHW001", 34)
-def fo():
     parser = argparse.ArgumentParser(description="process SX files with pyglider")
-    parser.add_argument("glider", type=int, help="glider number, e.g. 70")
+    parser.add_argument("glider", type=str, help="glider serial, e.g. SEA070")
     parser.add_argument("mission", type=int, help="Mission number, e.g. 23")
     args = parser.parse_args()
     process(args.glider, args.mission)
