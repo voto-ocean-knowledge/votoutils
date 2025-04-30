@@ -12,7 +12,7 @@ def adcp_data_present(platform_serial, mission):
     return adcp_file.exists()
 
 
-def proc_gliderad2cp(platform_serial, mission):
+def proc_gliderad2cp(platform_serial, mission, reprocess=False):
     adcp_raw_dir = Path(f"/data/data_raw/complete_mission/{platform_serial}/M{mission}/ADCP")
     if not adcp_raw_dir.exists():
         adcp_raw_dir.mkdir()
@@ -26,6 +26,13 @@ def proc_gliderad2cp(platform_serial, mission):
             ],
         )
     data_dir = Path(f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}")
+    out_dir = data_dir / "gliderad2cp"
+    if not out_dir.exists():
+        out_dir.mkdir(parents=True)
+    outfile = out_dir / f"{platform_serial}_M{mission}_adcp_proc.nc"
+    if outfile.exists() and not reprocess:
+        print(f"outfile {outfile} already exists. Exiting")
+        return
     data_file = data_dir / "timeseries" / "mission_timeseries.nc"
     ds_adcp = process_shear.process(str(adcp_file), data_file, options)
 
@@ -42,12 +49,12 @@ def proc_gliderad2cp(platform_serial, mission):
 
     dead_reckoning_pre_change = dead[:-1][dead.diff(dim='time', label='lower') != 0]
     pre_dive = dead_reckoning_pre_change[dead_reckoning_pre_change == 0]
+    pre_dive = pre_dive[:(len(post_dive))]
 
     gps_predive = np.array([[time, lat, lon] for time, lat, lon in
                    zip(pre_dive.time.values, pre_dive.latitude.values, pre_dive.longitude.values)])
     gps_postdive = np.array([[time, lat, lon] for time, lat, lon in
                     zip(post_dive.time.values, post_dive.latitude.values, post_dive.longitude.values)])
-
     dive_time_hours = (post_dive.time.values - pre_dive.time.values) / np.timedelta64(1, 'h')
     assert (dive_time_hours > 0).all
     assert 24 > np.mean(dive_time_hours) > 0.5
@@ -55,11 +62,21 @@ def proc_gliderad2cp(platform_serial, mission):
         ds_adcp, gps_predive, gps_postdive, options
     )
     currents = process_bias.process(currents, options)
-    out_dir = data_dir / "gliderad2cp"
-    if not out_dir.exists():
-        out_dir.mkdir(parents=True)
-    currents.to_netcdf(out_dir / f"{platform_serial}_M{mission}_adcp_proc.nc")
+    currents.to_netcdf(outfile)
+
+
+def proc_all_ad2cp():
+    in_paths = list(Path("/data/data_raw/complete_mission").glob("S*/M*"))
+    print(in_paths)
+    for inpath in in_paths:
+        parts = inpath.parts
+        platform_serial = parts[-2]
+        mission = int(parts[-1][1:])
+        if adcp_data_present(platform_serial, mission):
+            proc_gliderad2cp(platform_serial, mission)
+        
 
 if __name__ == '__main__':
-    proc_gliderad2cp("SEA055", 89)
+    proc_all_ad2cp()
+    #proc_gliderad2cp("SEA055", 89)
     #proc_gliderad2cp("SEA044", 98)
