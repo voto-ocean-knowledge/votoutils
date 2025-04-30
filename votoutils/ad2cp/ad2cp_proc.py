@@ -15,7 +15,7 @@ def adcp_data_present(platform_serial, mission):
 def proc_gliderad2cp(platform_serial, mission, reprocess=False):
     adcp_raw_dir = Path(f"/data/data_raw/complete_mission/{platform_serial}/M{mission}/ADCP")
     if not adcp_raw_dir.exists():
-        adcp_raw_dir.mkdir()
+        adcp_raw_dir.mkdir(parents=True)
     adcp_file = adcp_raw_dir / f"{platform_serial}_M{mission}.ad2cp.00000.nc"
     if not adcp_file.exists():
         subprocess.check_call(
@@ -26,6 +26,7 @@ def proc_gliderad2cp(platform_serial, mission, reprocess=False):
             ],
         )
     data_dir = Path(f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}")
+    data_file = data_dir / "timeseries" / "mission_timeseries.nc"
     out_dir = data_dir / "gliderad2cp"
     if not out_dir.exists():
         out_dir.mkdir(parents=True)
@@ -33,7 +34,7 @@ def proc_gliderad2cp(platform_serial, mission, reprocess=False):
     if outfile.exists() and not reprocess:
         print(f"outfile {outfile} already exists. Exiting")
         return
-    data_file = data_dir / "timeseries" / "mission_timeseries.nc"
+    print(f"will process {adcp_file}")
     ds_adcp = process_shear.process(str(adcp_file), data_file, options)
 
     data = xr.open_dataset(data_file)
@@ -41,6 +42,11 @@ def proc_gliderad2cp(platform_serial, mission, reprocess=False):
     # Keep only data points with valid time, lon and lat
     lon_lat_time = ~np.isnan(data.time) * ~np.isnan(data.longitude) * ~np.isnan(data.latitude)
     dead = dead[lon_lat_time]
+    sample_step = ((dead.time.max() - dead.time.min()) / len(dead)) / np.timedelta64(1, 's')
+    target_step = 10  # target one sample every 10 seconds for the calculation of DAC. Coarsening speeds this up *a lot*
+    subsample = max(1, int(target_step / sample_step))
+    print(f"subsampling dead reckoning data by a factor of {subsample} to match target sampling rate of {target_step} seconds during DAC caclulation")
+    dead = dead[::subsample]
 
     # dead reckoning 0 when lon/lat are from GPS fix. 1 when interpolated. Use the gradient of this to find
     # where the glider starts & ends surface GPS fixes
@@ -49,7 +55,10 @@ def proc_gliderad2cp(platform_serial, mission, reprocess=False):
 
     dead_reckoning_pre_change = dead[:-1][dead.diff(dim='time', label='lower') != 0]
     pre_dive = dead_reckoning_pre_change[dead_reckoning_pre_change == 0]
-    pre_dive = pre_dive[:(len(post_dive))]
+
+    # Cut out any predives after the last postdives and postdives before the first predive
+    pre_dive = pre_dive[pre_dive.time < post_dive.time.max()]
+    post_dive = post_dive[post_dive.time > pre_dive.time.min()]
 
     gps_predive = np.array([[time, lat, lon] for time, lat, lon in
                    zip(pre_dive.time.values, pre_dive.latitude.values, pre_dive.longitude.values)])
@@ -78,5 +87,4 @@ def proc_all_ad2cp():
 
 if __name__ == '__main__':
     proc_all_ad2cp()
-    #proc_gliderad2cp("SEA055", 89)
     #proc_gliderad2cp("SEA044", 98)
