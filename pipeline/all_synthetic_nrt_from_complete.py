@@ -75,8 +75,7 @@ def set_first_timestamp(df):
 def subsample_pld_file(pldfile):
     _log.debug(f"proc {pldfile}")
     fn = pldfile.name
-    glider, mission, _ = fn.split(".", maxsplit=2)
-    glider = int(glider[3:])
+    platform_serial, mission, _ = fn.split(".", maxsplit=2)
     df = pl.read_csv(pldfile, separator=";", truncate_ragged_lines=True)
     df = df.with_columns(
         (pl.col("PLD_REALTIMECLOCK").str.slice(0, 18) + "1").alias("time_seconds"),
@@ -104,7 +103,7 @@ def subsample_pld_file(pldfile):
     fn_out = fn.replace("raw", "sub").replace(".gz", "")
     outfile = (
         Path(
-            f"/data/data_raw/nrt/SEA0{str(glider).zfill(2)}/{str(mission).zfill(6)}/C-Csv/",
+            f"/data/data_raw/nrt/{platform_serial.upper()}/{str(mission).zfill(6)}/C-Csv/",
         )
         / fn_out
     )
@@ -164,6 +163,7 @@ def all_nrt_from_complete(reprocess=True):
                 )
             except ValueError:
                 _log.warning(f"Could not process {mission_path}")
+
     _log.info(f"will process {len(glidermissions)} missions")
     for i, (platform_serial, mission) in enumerate(glidermissions):
         nrt_path = Path(
