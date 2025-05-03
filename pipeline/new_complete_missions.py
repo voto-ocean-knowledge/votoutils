@@ -75,7 +75,7 @@ def main():
             )
             df_reprocess = pd.concat((df_reprocess, new_row))
     _log.info(f"end length {len(df_reprocess)}")
-    df_reprocess["gm"] = df_reprocess.glider * 10000 + df_reprocess.mission
+    df_reprocess["gm"] = df_reprocess.glider + df_reprocess.mission.astype(str)
     df_reprocess = df_reprocess.groupby("gm").first()
     df_reprocess.sort_values("proc_time", inplace=True)
 
