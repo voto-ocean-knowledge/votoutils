@@ -7,7 +7,7 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 from votoutils.glider.process_pyglider import proc_pyglider_l0
-from votoutils.utilities.utilities import natural_sort
+from votoutils.utilities.utilities import natural_sort, platforms_no_proc
 from votoutils.glider.metocc import create_csv
 
 script_dir = pathlib.Path(__file__).parent.absolute()
@@ -22,7 +22,6 @@ logging.basicConfig(
     level=logging.INFO,
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-glider_no_proc = ["SEA057"]
 
 
 def proc_nrt():
@@ -30,7 +29,7 @@ def proc_nrt():
     all_glider_paths = pathlib.Path("/data/data_raw/nrt").glob("*")
     for glider_path in all_glider_paths:
         platform_serial = str(glider_path.parts[-1])
-        if platform_serial in glider_no_proc:
+        if platform_serial in platforms_no_proc:
             _log.info(f"{platform_serial} is not to be processed. Skipping")
             continue
         _log.info(f"Checking {platform_serial}")

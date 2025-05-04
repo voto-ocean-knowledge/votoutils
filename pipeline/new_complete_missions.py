@@ -5,6 +5,7 @@ import numpy as np
 import logging
 from pathlib import Path
 from pyglider_single_mission import process
+from votoutils.utilities.utilities import missions_no_proc
 
 _log = logging.getLogger(__name__)
 
@@ -46,6 +47,9 @@ def main():
     for mission_path in glider_paths_good:
         platform_serial = mission_path.parts[-2]
         mission = int(mission_path.parts[-1][1:])
+        if [platform_serial, mission] in missions_no_proc:
+            _log.debug(f"{platform_serial} M{mission} in mission_no_proc. Skipping")
+            continue
         a = [
             np.logical_and(
                 df_reprocess.glider == platform_serial,

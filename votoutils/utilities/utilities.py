@@ -217,3 +217,10 @@ def add_standard_global_attrs(ds):
             continue
         ds.attrs[key] = val
     return ds
+
+platforms_no_proc = ["SEA057"]
+missions_no_proc = [
+                    ("SEA057", 51),
+                    ("SEA079", 29),
+                    ("SEA057", 75),
+                    ]

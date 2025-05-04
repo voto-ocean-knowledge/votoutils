@@ -9,7 +9,7 @@ import pandas as pd
 import datetime
 import subprocess
 import shutil
-from votoutils.utilities.utilities import natural_sort, match_input_files
+from votoutils.utilities.utilities import natural_sort, match_input_files, missions_no_proc
 from votoutils.glider.process_pyglider import proc_pyglider_l0
 from votoutils.upload.sync_functions import sync_script_dir
 
@@ -20,10 +20,7 @@ os.chdir(script_dir)
 
 _log = logging.getLogger(__name__)
 
-blocked_missions = [
-    ["SEA079", 29],
-    ["SEA057", 75],
-                    ]
+
 
 def remove_proc_files(platform_serial, mission):
     rawnc_dir = pathlib.Path(
@@ -61,8 +58,8 @@ def update_processing_time(platform_serial, mission, start):
 
 
 def process(platform_serial, mission):
-    if [platform_serial, mission] in blocked_missions:
-        _log.info(f"Will not process {platform_serial}, M{mission} as it is in blocked_missions")
+    if (platform_serial, mission) in missions_no_proc:
+        _log.info(f"Will not process {platform_serial}, M{mission} as it is in missions_no_proc")
     if len(platform_serial) < 4:
         platform_serial = f"SEA{platform_serial}"
 

@@ -3,6 +3,8 @@ import xarray as xr
 import numpy as np
 from pathlib import Path
 import subprocess
+from votoutils.utilities.utilities import missions_no_proc
+
 options = tools.get_options(xaxis=1, yaxis=None, shear_bias_regression_depth_slice=(10,1000))
 
 
@@ -81,6 +83,9 @@ def proc_all_ad2cp():
         parts = inpath.parts
         platform_serial = parts[-2]
         mission = int(parts[-1][1:])
+        if [platform_serial, mission] in missions_no_proc:
+            print(f"{platform_serial} M{mission} in mission_no_proc. Skipping")
+            continue
         if adcp_data_present(platform_serial, mission):
             proc_gliderad2cp(platform_serial, mission)
         
