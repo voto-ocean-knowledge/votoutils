@@ -60,6 +60,7 @@ def update_processing_time(platform_serial, mission, start):
 def process(platform_serial, mission):
     if (platform_serial, mission) in missions_no_proc:
         _log.info(f"Will not process {platform_serial}, M{mission} as it is in missions_no_proc")
+        return
     if len(platform_serial) < 4:
         platform_serial = f"SEA{platform_serial}"
 
