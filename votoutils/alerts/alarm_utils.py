@@ -24,6 +24,7 @@ with open(script_dir / "alarm_secrets.json", "r") as secrets_file:
     secrets_dict = json.load(secrets_file)
 with open(script_dir / "contacts_secrets.json", "r") as secrets_file:
     contacts = json.load(secrets_file)
+mail_recipient = secrets_dict["schedule_mail"]
 
 schedule = pd.read_csv(
     "/data/log/schedule.csv", parse_dates=True, index_col=0, sep=";", dtype=str
