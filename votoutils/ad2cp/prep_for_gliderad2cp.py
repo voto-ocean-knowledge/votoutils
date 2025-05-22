@@ -36,7 +36,7 @@ def convert_from_ad2cp(dir_in, outfile, reprocess=False):
     infile = ad2cp_files[0]
     fn = infile.name
     if outfile.exists() and not reprocess:
-        _log.info(f"outfile {outfile} already exists. Not reprocessing")
+        _log.debug(f"outfile {outfile} already exists. Not reprocessing")
         return
     _log.debug(f"Converting {infile}")
 
@@ -77,28 +77,28 @@ def convert_ad2cp_to_nc(
     dir_parts[-3] = "4_Processed"
     destination_dir = Path(*dir_parts) / "ADCP_auto"
     glider_str, mission_str = dir_parts[-1].split("_")
-    glider = int(glider_str[3:])
+    platform_serial = glider_str
     mission = int(mission_str[1:])
-    destination_file = destination_dir / f"SEA{str(glider).zfill(3)}_M{mission}.ad2cp"
-    nc_out_fn = f"SEA{str(glider).zfill(3)}_M{mission}.ad2cp.00000.nc"
+    destination_file = destination_dir / f"{platform_serial}_M{mission}.ad2cp"
+    nc_out_fn = f"{platform_serial}_M{mission}.ad2cp.00000.nc"
     nc_out_file = destination_dir / nc_out_fn
     if nc_out_file.exists():
-        _log.info(f"destination file {nc_out_file} already exists")
-        req = f"https://erddap.observations.voiceoftheocean.org/erddap/files/ad2cp/SEA0{glider}_M{mission}.ad2cp.00000.nc"
+        _log.debug(f"destination file {nc_out_file} already exists")
+        req = f"https://erddap.observations.voiceoftheocean.org/erddap/files/ad2cp/{platform_serial}_M{mission}.ad2cp.00000.nc"
         if req in df.url.values:
-            _log.info(f"destination file {nc_out_file} already on erddap")
+            _log.debug(f"destination file {nc_out_file} already on erddap")
             return
         for script in ["upload_adcp.sh", upload_script]:
             subprocess.check_call(
                 [
                     "/usr/bin/bash",
                     str(sync_script_dir / script),
-                    str(glider),
+                    str(platform_serial),
                     str(mission),
                     str(nc_out_file),
                 ],
             )
-        msg = f"uploaded ADCP data {nc_out_file} for SEA{glider} M{mission}"
+        msg = f"uploaded ADCP data {nc_out_file} for {platform_serial} M{mission}"
         mailer("uploaded ADCP", msg)
         return
     if not source_dir.exists():
@@ -106,7 +106,7 @@ def convert_ad2cp_to_nc(
         mailer("ADCP error", msg)
         _log.error(msg)
         return
-    source_files = list(source_dir.glob(f"*{glider}*{mission}*ad2cp"))
+    source_files = list(source_dir.glob(f"*{int(platform_serial[-3:])}*{mission}*ad2cp"))
     if len(source_files) == 0:
         msg = f"no input ad2cp files in {source_dir}"
         mailer("ADCP error", msg)
@@ -129,19 +129,21 @@ def convert_ad2cp_to_nc(
                 [
                     "/usr/bin/bash",
                     str(sync_script_dir / script),
-                    str(glider),
+                    str(platform_serial),
                     str(mission),
                     str(nc_out_file),
                 ],
             )
-        msg = f"uploaded ADCP data {nc_out_file} for SEA{glider} M{mission}"
+        msg = f"uploaded ADCP data {nc_out_file} for {platform_serial} M{mission}"
         mailer("uploaded ADCP", msg)
 
 
 def convert_all_ad2cp():
+    _log.info("***** START *****")
     mission_list = list_missions(to_skip=skip_projects)
     for mission_dir in mission_list:
         convert_ad2cp_to_nc(mission_dir)
+    _log.info("***** END *****")
 
 
 if __name__ == "__main__":
