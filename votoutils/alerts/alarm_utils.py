@@ -92,6 +92,7 @@ def setup_logger(name, log_file, level=logging.INFO, formatter=format_basic):
 
 
 def find_previous_action(df, ddict):
+    df = df[~df.alarm_source.str.contains("surf")]
     if df.empty:
         return df
     df = df[(df.mission == ddict["mission"]) & (df.cycle == ddict["cycle"])]
