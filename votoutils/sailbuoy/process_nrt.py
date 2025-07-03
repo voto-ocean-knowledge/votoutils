@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import logging
+from votoutils.utilities.geocode import locs_to_seas
 
 _log = logging.getLogger(__name__)
 
@@ -107,6 +108,7 @@ def make_sailbuoy_ds(df, sb, mission):
     ds["latitude"] = ds.Lat
     drops = [ 'Unnamed: 45','Time', 'time_diff']
     to_drop = set(drops).intersection(list(ds))
+    basin_str = locs_to_seas(ds.latitude, ds.longitude)
     ds = ds.drop_vars(to_drop)
     attrs = {
         "geospatial_lon_min": df.Lat.min(),
@@ -119,6 +121,7 @@ def make_sailbuoy_ds(df, sb, mission):
         "project_url": "https://voiceoftheocean.org/samba-smart-autonomous-monitoring-of-the-baltic-sea/",
         "platform_serial": f"SB{sb}",
         "deployment_id": mission,
+        "basin": basin_str,
     }
     ds.attrs = attrs
     ds.to_netcdf(f"/data/sailbuoy/nrt_proc/SB{sb}_M{mission}.nc")
