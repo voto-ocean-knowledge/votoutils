@@ -6,6 +6,7 @@ from votoutils.glider.post_process_ctd import (
     salinity_pressure_correction,
     correct_rbr_lag,
 )
+from votoutils.glider.fix_oxygen_alseamar_bug import recalc_oxygen
 import logging
 
 _log = logging.getLogger(__name__)
@@ -122,6 +123,7 @@ def post_process(ds):
     _log.info("start post process")
     ds = salinity_pressure_correction(ds)
     ds = correct_rbr_lag(ds)
+    ds = recalc_oxygen(ds)
     ds = process_altimeter(ds)
     ds = filter_territorial_data(ds)
     if "backscatter_scaled" in list(ds):
