@@ -37,7 +37,7 @@ def main():
         )
         df_reprocess.to_csv("/home/pipeline/reprocess.csv", index=False)
     _log.info(f"start length {len(df_reprocess)}")
-    glider_paths = list(pathlib.Path("/data/data_raw/complete_mission").glob("SEA*"))
+    glider_paths = list(pathlib.Path("/data/data_raw/complete_mission").glob("S*"))
     glider_paths_good = []
     for path in glider_paths:
         mission_paths = path.glob("M*")

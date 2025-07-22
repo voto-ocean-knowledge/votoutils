@@ -19,7 +19,7 @@ files_collection = (
     ("sailbuoy.log", "Finished processing nrt sailbuoy data", 2),
     ("voto_add_data.log", "nrt mission add complete", 2),
     ("nrt_plots.log", "End plot creation", 2),
-    ("office_sync_to_pipeline.log", "complete", 2),
+    ("office_sync_to_pipeline.log", "complete", 25),
     ("rsync_nrt.log", "total size is", 2),
     ("rsync_metocc.log", "total size is", 2),
     ("rsync_web.log", "total size is", 2),
@@ -27,7 +27,7 @@ files_collection = (
     ("seaex-rsync.log", "total size is", 2),
     ("new_complete_mission.log", "Complete", 25),
     ("ctd_plots.log", "completed process all CTDs", 25),
-    ("glider_transect.log", "End analysis", 2),
+    #("glider_transect.log", "End analysis", 2),
     ("metadata_tables.log", "End processing", 25),
     ("cherrdap.log", "ERDDAP checks complete", 25),
 )

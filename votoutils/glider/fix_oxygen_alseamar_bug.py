@@ -69,7 +69,25 @@ def oxygen_concentration_correction(ds, ncvar):
         f'{ref_sal} PSU')
     return ds
 
-
+bad_oxygen_missions = ['SEA055_M89',
+                       'SEA056_M80',
+                       'SEA056_M82',
+                       'SEA056_M83',
+                       'SEA067_M68',
+                       'SEA067_M70',
+                       'SEA067_M72',
+                       'SEA068_M40',
+                       'SEA068_M41',
+                       'SEA069_M44',
+                       'SEA069_M46',
+                       'SEA076_M34',
+                       'SEA076_M36',
+                       'SEA076_M37',
+                       'SEA077_M41',
+                       'SEA078_M33',
+                       'SEA078_M35',
+                       'SEA078_M36',
+                       ]
 def recalc_oxygen(ds):
     """
     This function recalculates dissolved oxygen concentration to correct a bug in ALSEAMAR firmware versions.
@@ -82,6 +100,14 @@ def recalc_oxygen(ds):
     """
     if "oxygen_concentration" not in ds.variables:
         _log.info("oxygen_concentration no present in ds. No correction applied")
+        return ds
+    attrs = ds.attrs
+    glidermission = f"{attrs['platform_serial']}_M{attrs['deployment_id']}"
+    if glidermission not in bad_oxygen_missions:
+        _log.info("glidermission does not need oxygen correction")
+        return ds
+    if "oxygen_led_counts" not in ds.variables:
+        _log.warning("cannot correct oxygen as raw values oxygen_led_counts not present in data")
         return ds
 
     if "recalc_oxygen" in ds['oxygen_concentration'].attrs['comment']:

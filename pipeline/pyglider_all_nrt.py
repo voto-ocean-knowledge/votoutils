@@ -3,6 +3,7 @@ import sys
 import pathlib
 import logging
 from votoutils.glider.process_pyglider import proc_pyglider_l0
+from votoutils.utilities.utilities import missions_no_proc
 
 script_dir = pathlib.Path(__file__).parent.absolute()
 sys.path.append(str(script_dir))
@@ -31,6 +32,9 @@ def proc_all_nrt(reprocess = False):
             _log.warning(f"Could not process {fn}")
 
     for platform_serial, mission in glidermissions:
+        if [platform_serial, mission] in missions_no_proc:
+            _log.info(f"skipping {platform_serial, mission}")
+            continue
         input_dir = f"/data/data_raw/nrt/{platform_serial}/{str(mission).zfill(6)}/C-Csv/"
         if not pathlib.Path(input_dir).exists():
             _log.info(

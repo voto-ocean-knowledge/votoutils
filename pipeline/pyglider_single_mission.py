@@ -124,4 +124,7 @@ if __name__ == "__main__":
     parser.add_argument("glider", type=str, help="glider serial, e.g. SEA070")
     parser.add_argument("mission", type=int, help="Mission number, e.g. 23")
     args = parser.parse_args()
-    process(args.glider, args.mission)
+    glider = args.glider
+    if len(glider) < 3:
+        glider = f"SEA{str(glider).zfill(3)}"
+    process(glider, args.mission)
