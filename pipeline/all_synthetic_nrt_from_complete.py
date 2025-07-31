@@ -75,8 +75,7 @@ def set_first_timestamp(df):
 def subsample_pld_file(pldfile):
     _log.debug(f"proc {pldfile}")
     fn = pldfile.name
-    glider, mission, _ = fn.split(".", maxsplit=2)
-    glider = int(glider[3:])
+    platform_serial, mission, _ = fn.split(".", maxsplit=2)
     df = pl.read_csv(pldfile, separator=";", truncate_ragged_lines=True)
     df = df.with_columns(
         (pl.col("PLD_REALTIMECLOCK").str.slice(0, 18) + "1").alias("time_seconds"),
@@ -104,7 +103,7 @@ def subsample_pld_file(pldfile):
     fn_out = fn.replace("raw", "sub").replace(".gz", "")
     outfile = (
         Path(
-            f"/data/data_raw/nrt/SEA0{str(glider).zfill(2)}/{str(mission).zfill(6)}/C-Csv/",
+            f"/data/data_raw/nrt/{platform_serial.upper()}/{str(mission).zfill(6)}/C-Csv/",
         )
         / fn_out
     )
@@ -114,11 +113,11 @@ def subsample_pld_file(pldfile):
     os.unlink(outfile)
 
 
-def synthetic_nrt_files_from_complete(glider, mission, dive_stride=5):
+def synthetic_nrt_files_from_complete(platform_serial, mission, dive_stride=5):
     nrt_path = Path(
-        f"/data/data_raw/nrt/SEA0{str(glider).zfill(2)}/{str(mission).zfill(6)}/C-Csv/",
+        f"/data/data_raw/nrt/{platform_serial}/{str(mission).zfill(6)}/C-Csv/",
     )
-    delayed_path = Path(f"/data/data_raw/complete_mission/SEA{glider}/M{mission}")
+    delayed_path = Path(f"/data/data_raw/complete_mission/{platform_serial}/M{mission}")
     if not nrt_path.exists():
         nrt_path.mkdir(parents=True)
     in_files_gli = sorted(
@@ -144,15 +143,15 @@ def synthetic_nrt_files_from_complete(glider, mission, dive_stride=5):
 
 def all_nrt_from_complete(reprocess=True):
     _log.info("Start nrt from complete")
-    glider_paths = list(Path("/data/data_l0_pyglider/complete_mission").glob("SEA*"))
+    glider_paths = list(Path("/data/data_l0_pyglider/complete_mission").glob("S*"))
     glidermissions = []
     for glider_path in glider_paths:
         mission_paths = glider_path.glob("M*")
         for mission_path in mission_paths:
-            glider = int(glider_path.parts[-1][3:])
+            platform_serial = glider_path.parts[-1]
             mission = int(mission_path.parts[-1][1:])
             nrt_path = Path(
-                f"/data/data_raw/nrt/SEA0{str(glider).zfill(2)}/{str(mission).zfill(6)}/C-Csv/",
+                f"/data/data_raw/nrt/{platform_serial}/{str(mission).zfill(6)}/C-Csv/",
             )
             syn_marker_path = nrt_path / "synthetic_nrt_data.txt"
             if nrt_path.exists() and not syn_marker_path.exists():
@@ -160,20 +159,21 @@ def all_nrt_from_complete(reprocess=True):
                 continue
             try:
                 glidermissions.append(
-                    (int(glider_path.parts[-1][3:]), int(mission_path.parts[-1][1:])),
+                    (glider_path.parts[-1], int(mission_path.parts[-1][1:])),
                 )
             except ValueError:
                 _log.warning(f"Could not process {mission_path}")
+
     _log.info(f"will process {len(glidermissions)} missions")
-    for i, (glider, mission) in enumerate(glidermissions):
+    for i, (platform_serial, mission) in enumerate(glidermissions):
         nrt_path = Path(
-            f"/data/data_raw/nrt/SEA0{str(glider).zfill(2)}/{str(mission).zfill(6)}/C-Csv/",
+            f"/data/data_raw/nrt/{platform_serial}/{str(mission).zfill(6)}/C-Csv/",
         )
         if nrt_path.exists() and not reprocess:
-            _log.info(f"SEA{glider} M{mission} already exists. Skipping")
+            _log.info(f"{platform_serial} M{mission} already exists. Skipping")
             continue
-        synthetic_nrt_files_from_complete(glider, mission)
-        _log.info(f"{i + 1}/{len(glidermissions)} Processed SEA{glider} M{mission}")
+        synthetic_nrt_files_from_complete(platform_serial, mission)
+        _log.info(f"{i + 1}/{len(glidermissions)} Processed {platform_serial} M{mission}")
 
     _log.info("Complete synthetic nrt from complete")
 

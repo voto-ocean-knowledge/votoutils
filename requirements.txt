@@ -11,9 +11,9 @@ netcdf4
 numpy
 pandas
 polars>=1.0.0
+pyarrow
 pynmea2
 pyyaml
+requests
 seabird
 xarray
-pyarrow
-requests

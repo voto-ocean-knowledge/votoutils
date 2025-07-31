@@ -35,6 +35,32 @@ def get_seas(gridfile):
     return locs_to_seas(lon, lat)
 
 
+def nan_bad_locations(ds, max_flag=3):
+    ds["longitude"][ds["longitude_qc"] > max_flag] = np.nan
+    ds["latitude"][ds["latitude_qc"] > max_flag] = np.nan
+    return ds
+
+
+def flag_bad_locations(ds, threshold = 1, sus_threshold=0.6):
+    # threshold is max speed in m/s
+    lat_to_m = 111 * 1000
+    lon_to_m = lat_to_m * np.cos(np.deg2rad(np.nanmean(ds.latitude.values)))
+    seconds = ds.time.diff(dim='time').values / np.timedelta64(1, 's')
+    speed_x = ds.longitude.diff(dim='time').values * lon_to_m / seconds
+    speed_y = ds.latitude.diff(dim='time').values * lat_to_m / seconds
+    speed = np.sqrt((speed_x ** 2 + speed_y ** 2))
+    for varname in ['longitude', 'latitude']:
+        ds[f'{varname}_qc'].values[:-1][speed > sus_threshold] = 3
+        ds[f'{varname}_qc'].values[1:][speed > sus_threshold] = 3
+        ds[f'{varname}_qc'].values[:-1][speed > threshold] = 4
+        ds[f'{varname}_qc'].values[1:][speed > threshold] = 4
+        dss = ds[varname].copy()
+        dss[ds[f'{varname}_qc']!=1] = np.nan
+        ds[f'{varname}_qc'].values[ds[varname].values < np.nanpercentile(dss, 0.1) - 0.1] = 4
+        ds[f'{varname}_qc'].values[ds[varname].values > np.nanpercentile(dss, 99.9) + 0.1] = 4
+    return ds
+
+
 def get_seas_merged_nav_nc(navfile):
     df = pl.read_parquet(navfile)
     lon = nmea2deg(df.select("Lon").to_numpy()[:, 0])

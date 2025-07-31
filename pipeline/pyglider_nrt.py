@@ -7,7 +7,7 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 from votoutils.glider.process_pyglider import proc_pyglider_l0
-from votoutils.utilities.utilities import natural_sort
+from votoutils.utilities.utilities import natural_sort, platforms_no_proc
 from votoutils.glider.metocc import create_csv
 
 script_dir = pathlib.Path(__file__).parent.absolute()
@@ -22,27 +22,26 @@ logging.basicConfig(
     level=logging.INFO,
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-glider_no_proc = []
 
 
 def proc_nrt():
     _log.info("Start nrt processing")
-    all_glider_paths = pathlib.Path("/data/data_raw/nrt").glob("SEA*")
+    all_glider_paths = pathlib.Path("/data/data_raw/nrt").glob("*")
     for glider_path in all_glider_paths:
-        glider = str(glider_path)[-3:].lstrip("0")
-        if int(glider) in glider_no_proc:
-            _log.info(f"SEA{glider} is not to be processed. Skipping")
+        platform_serial = str(glider_path.parts[-1])
+        if platform_serial in platforms_no_proc:
+            _log.info(f"{platform_serial} is not to be processed. Skipping")
             continue
-        _log.info(f"Checking SEA{glider}")
-        mission_paths = list(glider_path.glob("00*"))
+        _log.info(f"Checking {platform_serial}")
+        mission_paths = list(glider_path.glob("00*/C-Csv"))
         if not mission_paths:
-            _log.warning(f"No missions found for SEA{glider}. Skipping")
+            _log.warning(f"No missions found for {platform_serial}. Skipping")
             continue
         mission_paths.sort()
-        mission = str(mission_paths[-1])[-3:].lstrip("0")
-        _log.info(f"Checking SEA{glider} M{mission}")
-        input_dir = f"/data/data_raw/nrt/SEA{glider.zfill(3)}/{mission.zfill(6)}/C-Csv/"
-        output_dir = f"/data/data_l0_pyglider/nrt/SEA{glider}/M{mission}/"
+        mission = str(mission_paths[-1].parts[-2]).lstrip("0")
+        _log.info(f"Checking {platform_serial} M{mission}")
+        input_dir = f"/data/data_raw/nrt/{platform_serial}/{mission.zfill(6)}/C-Csv/"
+        output_dir = f"/data/data_l0_pyglider/nrt/{platform_serial}/M{mission}/"
         gridfiles_dir = f"{output_dir}gridfiles/"
         ts_dir = f"{output_dir}/timeseries/"
         try:
@@ -65,15 +64,15 @@ def proc_nrt():
         )
         file_time = df.index.max()
         if max_time + np.timedelta64(10, "m") > file_time:
-            _log.info(f"No new SEA{glider} M{mission} input files")
+            _log.info(f"No new {platform_serial} M{mission} input files")
             continue
         if not pathlib.Path(
-            f"/data/deployment_yaml/mission_yaml/SEA{glider}_M{mission}.yml",
+            f"/data/deployment_yaml/mission_yaml/{platform_serial}_M{mission}.yml",
         ).exists():
-            _log.warning(f"yml file for SEA{glider} M{mission} not found.")
+            _log.warning(f"yml file for {platform_serial} M{mission} not found.")
             continue
-        _log.info(f"Processing SEA{glider} M{mission}")
-        proc_pyglider_l0(glider, mission, "sub", input_dir, output_dir)
+        _log.info(f"Processing {platform_serial} M{mission}")
+        proc_pyglider_l0(platform_serial, mission, "sub", input_dir, output_dir)
         _log.info("creating metocc csv")
         timeseries_dir = pathlib.Path(output_dir) / "timeseries"
         timeseries_nc = list(timeseries_dir.glob("*.nc"))[0]

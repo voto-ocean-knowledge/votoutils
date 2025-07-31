@@ -3,14 +3,35 @@ import xarray as xr
 import numpy as np
 import pynmea2
 import datetime
+import gsw
+from pathlib import Path
 
 from votoutils.utilities import utilities
 from votoutils.utilities import vocabularies
 
 
-def parse_nrt():
-    df = pd.read_csv("SB2120/AUTO/DATA.TXT", skiprows=1)
-    df = pd.read_csv("SB2120/AUTO/DATA.TXT", skiprows=1, names=np.arange(df.shape[1]))
+class Sailbuoy:
+    def __init__(self, input_dir=".", base_dir="."):
+        self.input_dir = Path(input_dir)
+        self.base_dir = Path(base_dir)
+        self.output_dir = self.base_dir / "output"
+        if not self.output_dir.exists():
+            self.output_dir.mkdir(parents=True)
+
+    def parse_nrt(self):
+        parse_nrt(self.input_dir / "AUTO", self.output_dir)
+
+    def parse_legato(self):
+        parse_legato(self.input_dir, self.output_dir)
+
+    def parse_gmx560(self):
+        parse_gmx560(self.input_dir / "DATA", self.output_dir)
+
+
+def parse_nrt(auto_dir, output_dir):
+    auto_csv = auto_dir / "DATA.TXT"
+    df = pd.read_csv(auto_csv, skiprows=1)
+    df = pd.read_csv(auto_csv, skiprows=1, names=np.arange(df.shape[1]))
     og_cols = df.columns.copy()
     for col_name in og_cols[:-1]:
         col = df[col_name]
@@ -35,8 +56,8 @@ def parse_nrt():
             continue
     auto = df.set_index("Time")
 
-    df = pd.read_csv("SB2120/DATA/DATA.TXT", skiprows=1)
-    df = pd.read_csv("SB2120/DATA/DATA.TXT", skiprows=1, names=np.arange(df.shape[1]))
+    df = pd.read_csv(auto_csv, skiprows=1)
+    df = pd.read_csv(auto_csv, skiprows=1, names=np.arange(df.shape[1]))
     og_cols = df.columns.copy()
     for col_name in og_cols[:-1]:
         col = df[col_name]
@@ -76,23 +97,25 @@ def parse_nrt():
             subset=["significant_wave_height"],
         )
     )
-    mose_nrt.to_parquet("intermediate_data/mose_nrt.parquet")
+    mose_nrt.to_parquet(output_dir / "mose_nrt.parquet")
     df_nrt = data.join(auto, how="outer", lsuffix="_data", rsuffix="_auto")
-    df_nrt.to_csv("data_out/nrt.csv")
+    df_nrt.to_csv(output_dir / "nrt.csv")
 
 
-def parse_legato():
+def parse_legato(input_dir, output_dir):
     df_legato = (
-        pd.read_csv("SB2120/LEGATO/207496_20240830_1456_data.txt", parse_dates=["Time"])
+        pd.read_csv(
+            list((input_dir / "LEGATO").glob("*data.txt"))[0], parse_dates=["Time"]
+        )
         .set_index(
             "Time",
         )
         .rename({"Pressure": "pressure_legato"}, axis=1)
     )
-    df_legato.to_parquet("intermediate_data/legato.pqt")
+    df_legato.to_parquet(output_dir / "legato.pqt")
 
 
-def parse_gmx560():
+def parse_gmx560(input_dir, output_dir):
     dt = datetime.datetime(1970, 1, 1)
     messages = {
         "GPGGA": [],
@@ -103,7 +126,7 @@ def parse_gmx560():
         "WIXDRC": [],
         "WIXDRA": [],
     }
-    with open("SB2120/DATA/GMX560.TXT", encoding="latin") as infile:
+    with open(input_dir / "GMX560.TXT", encoding="latin") as infile:
         for line in infile.readlines():
             if "Sensorlog opened" in line:
                 dt = datetime.datetime.strptime(line[-20:-1], "%d.%m.%Y %H:%M:%S")
@@ -130,9 +153,11 @@ def parse_gmx560():
             if talker == "WIMWV":
                 talker += line.split(",")[2]
             messages[talker].append(f"{dt},{line}")
-
+    gmx_dir = output_dir / "GMX560"
+    if not gmx_dir.exists():
+        gmx_dir.mkdir(parents=True)
     for talker, lines in messages.items():
-        with open(f"intermediate_data/GMX560/{talker}.txt", mode="w") as outfile:
+        with open(output_dir / "GMX560" f"{talker}.txt", mode="w") as outfile:
             outfile.writelines(lines)
 
 
@@ -502,6 +527,11 @@ def export_dataset():
             ds[name] = ("time", df[col_name], vocabularies.vocab_attrs[name])
         else:
             print(f"fail for {col_name}")
+    ds["PSAL"] = xr.DataArray(
+        "N_MEASUREMENTS",
+        gsw.SP_from_C(ds.CNDC, ds.TEMP, ds.PRES),
+        vocabularies.vocab_attrs["PSAL"],
+    )
     # cut dataset down to active deployed period
     start = "2024-05-29T09:00:00"
     end = "2024-07-28T06:00:00"
@@ -518,11 +548,11 @@ def export_dataset():
 
 
 if __name__ == "__main__":
-    # parse_nrt()
-    # parse_legato()
-    # parse_mose()
-    # merge_mose()
-    # parse_gmx560()
-    # merge_gmx560()
-    # merge_sensors()
+    sb = Sailbuoy(
+        "/home/callum/Documents/data-flow/sailbuoy/process/SB2120",
+        "/home/callum/Downloads/tmpsb",
+    )
+    sb.parse_legato()
+    sb.parse_nrt()
+    sb.parse_gmx560()
     export_dataset()

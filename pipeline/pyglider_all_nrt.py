@@ -3,6 +3,7 @@ import sys
 import pathlib
 import logging
 from votoutils.glider.process_pyglider import proc_pyglider_l0
+from votoutils.utilities.utilities import missions_no_proc
 
 script_dir = pathlib.Path(__file__).parent.absolute()
 sys.path.append(str(script_dir))
@@ -18,7 +19,7 @@ logging.basicConfig(
 )
 
 
-def proc_all_nrt():
+def proc_all_nrt(reprocess = False):
     _log.info("Start nrt reprocessing")
     yml_files = list(pathlib.Path("/data/deployment_yaml/mission_yaml").glob("*.yml"))
     glidermissions = []
@@ -26,20 +27,26 @@ def proc_all_nrt():
         fn = yml_path.name.split(".")[0]
         glider_name, mission_name = fn.split("_")
         try:
-            glidermissions.append((int(glider_name[3:]), int(mission_name[1:])))
+            glidermissions.append((glider_name, int(mission_name[1:])))
         except ValueError:
             _log.warning(f"Could not process {fn}")
 
-    for glider, mission in glidermissions:
-        input_dir = f"/data/data_raw/nrt/SEA{str(glider).zfill(3)}/{str(mission).zfill(6)}/C-Csv/"
+    for platform_serial, mission in glidermissions:
+        if [platform_serial, mission] in missions_no_proc:
+            _log.info(f"skipping {platform_serial, mission}")
+            continue
+        input_dir = f"/data/data_raw/nrt/{platform_serial}/{str(mission).zfill(6)}/C-Csv/"
         if not pathlib.Path(input_dir).exists():
             _log.info(
-                f"SEA{glider} M{mission} does not have nrt alseamar raw files. skipping",
+                f"{platform_serial} M{mission} does not have nrt alseamar raw files. skipping",
             )
             continue
-        output_dir = f"/data/data_l0_pyglider/nrt/SEA{glider}/M{mission}/"
-        _log.info(f"Reprocessing SEA{glider} M{mission}")
-        proc_pyglider_l0(glider, mission, "sub", input_dir, output_dir)
+        output_dir = f"/data/data_l0_pyglider/nrt/{platform_serial}/M{mission}/"
+        if pathlib.Path(output_dir).exists() and not reprocess:
+            _log.info(f"Will not reprocess {platform_serial} M{mission}")
+            continue
+        _log.info(f"Reprocessing {platform_serial} M{mission}")
+        proc_pyglider_l0(platform_serial, mission, "sub", input_dir, output_dir)
     _log.info("Finished nrt processing")
 
 

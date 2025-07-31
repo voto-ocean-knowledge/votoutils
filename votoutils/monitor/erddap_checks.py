@@ -170,6 +170,25 @@ def unit_check(e, dataset_id):
                 mailer("cherddap", f"bad oxy units {attrs['units']}")
 
 
+def adcp_dataset_check(df):
+    meta = pd.read_csv(
+        "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/meta_users_table.csvp"
+    )
+    adcp = pd.read_csv(
+        "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/ad2cp.csvp"
+    )
+    meta_with_adcp = meta[meta["available_variables"].str.contains("ad2cp_pressure")]
+    delayed_missions = df.index[df.index.str[:11] == "delayed_SEA"].str[8:].values
+    missions_with_adcp = meta_with_adcp["datasetID"].str[4:].values
+    expected_adcp_missions = set(delayed_missions).intersection(missions_with_adcp)
+    adcp_files = set(adcp.name.str.split(".", expand=True)[0].values)
+    missing_adcp = expected_adcp_missions.difference(adcp_files)
+    expected_missing_adcp = ["SEA066_M16"]
+    bad_missing_adcp = missing_adcp.difference(expected_missing_adcp)
+    if len(bad_missing_adcp) > 0:
+        mailer("cherddap", f"missing expected adcp files {bad_missing_adcp}")
+
+
 def international_waters_check(e, dataset_id):
     _log.info(f"Check international waters {dataset_id}")
     e.dataset_id = dataset_id
@@ -270,20 +289,6 @@ def datasets_to_emodnet(df_datasets):
             mailer("cherddap", msg)
 
 
-def adcp_proc_check(e):
-    adcp_datasets = pd.read_csv(
-        e.get_search_url(search_for="delayed adcp", response="csv"),
-    )["Dataset ID"]
-    dataset_id = adcp_datasets[np.random.randint(0, len(adcp_datasets) - 1)]
-    e.dataset_id = dataset_id
-    e.variables = ["time", "adcp_time"]
-    ds = e.to_xarray(requests_kwargs={"timeout": 300})
-    ds = ds.drop_dims("timeseries")
-    if len(np.unique(ds.adcp_time.values)) < 10000:
-        msg = f"bad adcp times for {dataset_id}"
-        mailer("cherddap", msg)
-
-
 def good_times():
     _log.warning("TODO: check times of all datetime like columns are in expected range")
     _log.warning(
@@ -310,6 +315,7 @@ def main():
     df_datasets.set_index("datasetID", inplace=True)
     df_datasets.drop("allDatasets", inplace=True)
     df_datasets = df_datasets[df_datasets.index.str.contains("SEA")]
+    adcp_dataset_check(df_datasets)
     enough_datasets(df_datasets)
     df_datasets = nrt_vs_complete(df_datasets)
     datasets_to_emodnet(df_datasets)
@@ -325,14 +331,13 @@ def main():
     sensible_values(e, delayed[np.random.randint(0, num_ds - 1)])
     international_waters_check(e, "nrt_SEA067_M27")
     international_waters_check(e, nrt[np.random.randint(0, num_nrt - 1)])
-    adcp_proc_check(e)
     good_times()
     manual_qc()
 
 
 if __name__ == "__main__":
     logging.basicConfig(
-        filename="/home/pipeline/log/cherrdap.log",
+        filename="/data/log/cherrdap.log",
         filemode="a",
         format="%(asctime)s %(levelname)-8s %(message)s",
         level=logging.INFO,

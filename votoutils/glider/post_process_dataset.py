@@ -1,11 +1,12 @@
 import numpy as np
 import re
 from votoutils.glider.post_process_optics import betasw_ZHH2009
-from votoutils.utilities.geocode import filter_territorial_data
+from votoutils.utilities.geocode import filter_territorial_data, nan_bad_locations, flag_bad_locations, locs_to_seas
 from votoutils.glider.post_process_ctd import (
     salinity_pressure_correction,
     correct_rbr_lag,
 )
+from votoutils.glider.fix_oxygen_alseamar_bug import recalc_oxygen
 import logging
 
 _log = logging.getLogger(__name__)
@@ -89,7 +90,7 @@ def process_altimeter(ds):
 
 def fix_variables(ds):
     attrs = ds.attrs
-    if int(attrs["glider_serial"]) == 69 and int(attrs["deployment_id"]) == 15:
+    if attrs["platform_serial"] == "SEA069" and int(attrs["deployment_id"]) == 15:
         _log.info("correcting phycocyanin values for SEA69 M15")
         ds["phycocyanin"].values = ds["phycocyanin"].values * 0.1
         ds.phycocyanin.attrs["comment"] += (
@@ -104,10 +105,17 @@ def nan_bad_depths(ds):
     ds["pressure"][ds["pressure"] > int(ds["pressure"].attrs["valid_max"])] = np.nan
     return ds
 
-
-def nan_bad_locations(ds):
-    ds["longitude"].values[ds["longitude_qc"] > 3] = np.nan
-    ds["latitude"].values[ds["latitude_qc"] > 3] = np.nan
+def correct_locations(ds):
+    ds = flag_bad_locations(ds)
+    ds = nan_bad_locations(ds)
+    qc_good = np.logical_and(ds.longitude_qc == 1, ds.latitude_qc == 1)
+    lon = ds.longitude[qc_good].values
+    lat = ds.latitude[qc_good].values
+    ds.attrs["basin"] = locs_to_seas(lon[::10], lat[::10])
+    ds.attrs["geospatial_lon_min"] = np.nanmin(lon)
+    ds.attrs["geospatial_lon_max"] = np.nanmax(lon)
+    ds.attrs["geospatial_lat_min"] = np.nanmin(lat)
+    ds.attrs["geospatial_lat_max"] = np.nanmax(lat)
     return ds
 
 
@@ -115,13 +123,14 @@ def post_process(ds):
     _log.info("start post process")
     ds = salinity_pressure_correction(ds)
     ds = correct_rbr_lag(ds)
+    ds = recalc_oxygen(ds)
     ds = process_altimeter(ds)
     ds = filter_territorial_data(ds)
     if "backscatter_scaled" in list(ds):
         ds = calculate_bbp(ds)
     ds = fix_variables(ds)
     ds = nan_bad_depths(ds)
-    ds = nan_bad_locations(ds)
+    ds = correct_locations(ds)
     ds = ds.sortby("time")
     _log.info("complete post process")
     return ds

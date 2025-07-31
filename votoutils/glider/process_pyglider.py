@@ -6,6 +6,8 @@ import yaml
 import numpy as np
 import polars as pl
 import xarray as xr
+
+from votoutils.glider import grid_glider_data
 from votoutils.glider.pre_process import clean_infiles
 from votoutils.utilities.geocode import get_seas_merged_nav_nc
 from votoutils.glider.post_process_dataset import post_process
@@ -89,7 +91,7 @@ def set_profile_numbers(ds):
     return ds
 
 
-def proc_pyglider_l0(glider, mission, kind, input_dir, output_dir):
+def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
     if kind not in ["raw", "sub"]:
         raise ValueError("kind must be raw or sub")
     if kind == "sub":
@@ -103,9 +105,9 @@ def proc_pyglider_l0(glider, mission, kind, input_dir, output_dir):
     profiledir = output_dir + "profiles/"
     griddir = output_dir + "gridfiles/"
     original_deploymentyaml = (
-        f"/data/deployment_yaml/mission_yaml/SEA{str(glider)}_M{str(mission)}.yml"
+        f"/data/deployment_yaml/mission_yaml/{platform_serial}_M{str(mission)}.yml"
     )
-    deploymentyaml = f"/data/tmp/deployment_yml/SEA{str(glider)}_M{str(mission)}.yml"
+    deploymentyaml = f"/data/tmp/deployment_yml/{platform_serial}_M{str(mission)}.yml"
 
     safe_delete([rawncdir, l0tsdir, profiledir, griddir])
     clean_infiles(input_dir)
@@ -122,10 +124,9 @@ def proc_pyglider_l0(glider, mission, kind, input_dir, output_dir):
     df = pl.read_parquet(nav_nc)
     total_dives = df.select("fnum").unique().shape[0]
     deployment["metadata"]["total_dives"] = total_dives
-    glider_num_pad = str(deployment["metadata"]["glider_serial"]).zfill(3)
     dataset_type = "nrt" if kind == "sub" else "delayed"
     dataset_id = (
-        f"{dataset_type}_SEA{glider_num_pad}_M{deployment['metadata']['deployment_id']}"
+        f"{dataset_type}_{platform_serial}_M{deployment['metadata']['deployment_id']}"
     )
     deployment["metadata"]["dataset_id"] = dataset_id
     variables = list(deployment["netcdf_variables"].keys())
@@ -134,6 +135,7 @@ def proc_pyglider_l0(glider, mission, kind, input_dir, output_dir):
     if "timebase" in variables:
         variables.remove("timebase")
     deployment["metadata"]["variables"] = variables
+    deployment["metadata"]["glider_serial"] = deployment["metadata"]["platform_serial"]
     with open("/data/deployment_yaml/deployment_profile_variables.yml", "r") as fin:
         profile_variables = yaml.safe_load(fin)
     deployment["profile_variables"] = profile_variables
@@ -168,5 +170,15 @@ def proc_pyglider_l0(glider, mission, kind, input_dir, output_dir):
     ds = set_profile_numbers(ds)
     ds = encode_times(ds)
     ds.to_netcdf(outname)
+    if kind=='raw':
+        from votoutils.ad2cp.ad2cp_proc import adcp_data_present, proc_gliderad2cp
+        if adcp_data_present(platform_serial, mission):
+            proc_gliderad2cp(platform_serial, mission)
+    grid_glider_data.make_gridfile_gliderad2cp(platform_serial, mission, kind)
 
-    ncprocess.make_L0_gridfiles(outname, griddir, deploymentyaml)
+if __name__ == '__main__':
+    glider = "SEA045"
+    mission = 43
+    proc_pyglider_l0(glider, mission, 'sub', f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv", f"/data/data_l0_pyglider/nrt/{glider}/M{mission}/")
+    #proc_pyglider_l0("SEA079", 20, 'sub', "/data/data_raw/nrt/SEA079/000020/C-Csv", "/data/data_l0_pyglider/nrt/SEA079/M20/")
+    #proc_pyglider_l0("SHW001", 34, 'sub', "/data/data_raw/nrt/SHW001/000034/C-Csv/", "/data/data_l0_pyglider/nrt/SHW001/M34/")

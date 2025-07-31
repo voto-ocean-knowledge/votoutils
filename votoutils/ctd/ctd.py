@@ -184,8 +184,13 @@ def read_ctd(ctd_csv, locfile):
     rows = locations[locations.File == fn]
     if rows.empty:
         mailer("ctd-process", f"no location for ctd {ctd_csv} in file {locfile}")
-        return
+        return pd.DataFrame()
     row = rows.iloc[0]
+    fn = row.File
+    outfile = f"/mnt/samba/processed/ctd/csv/{fn}.csv"
+    if Path(outfile).exists():
+        _log.info(f"Read clean ctd file {outfile}")
+        df = pd.read_csv(outfile)
     sep = "/"
     with open(ctd_csv) as file:
         for i, line in enumerate(file):
@@ -217,7 +222,7 @@ def read_ctd(ctd_csv, locfile):
                 df["calibration_date"] = line.split("=")[1][:-1]
                 break
     df["calibration_date"] = pd.to_datetime(df["calibration_date"], format="%Y/%m/%d")
-    df["filename"] = row.File
+    df["filename"] = fn
     df["longitude"] = row.Longitude
     df["latitude"] = row.Latitude
     if "Depth [m]" in list(df):
@@ -237,6 +242,7 @@ def read_ctd(ctd_csv, locfile):
             df = df.rename(columns={col: clean_names[col]})
     df = df[list(set(list(attrs_dict.keys()) + ["TIME"]).intersection(set(list(df))))]
     df["TIME"] = df.TIME.astype("datetime64[ns]")
+    df.to_csv(outfile, index=False)
     return df
 
 

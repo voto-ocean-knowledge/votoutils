@@ -5,6 +5,7 @@ Requires ffmpeg to play audio on linux
 Replace "al.mp3" with a path to an audio track of your choice for the alarm sound
 Recommend running as a cron job at a regular interval
 """
+
 from gtts import gTTS
 import json
 from pydub import AudioSegment
