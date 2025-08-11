@@ -80,7 +80,10 @@ def main():
     )
     if len(df_all_locs) != len(df_all_locs["File"].unique()):
         dupes = df_all_locs[df_all_locs.duplicated(subset=['File'], keep=False)][["File", "fn"]]
-        mailer("bad-ctd-locfiles", f"duplicate entries accross ctd location files, {dupes}")
+        dupes = dupes.sort_values("File")
+        dupes['directory'] = dupes.fn.astype(str).str[10:-13]
+        dupes_clean = dupes[['directory', 'File']]
+        mailer("bad-ctd-locfiles", f"duplicate entries accross ctd location files, {dupes_clean}")
 
     if len(missing_ctd_files) > 0:
         mailer(
