@@ -13,6 +13,11 @@ from votoutils.utilities.utilities import encode_times, mailer
 
 _log = logging.getLogger(__name__)
 
+expected_duplicates = [ "202504131338_ASTD152-ALC-R02_0788_133839",
+                        "202506101530_ASTD152-ALC-R02_0788_153043",
+                        "202506261516_ASTD152-ALC-R02_0788_151618",
+                        ]
+
 
 def main():
     location_files = list(Path("/mnt/samba/").glob("*/5_Calibration/CTD/*cation*.txt")) + list(Path("/mnt/samba/").glob("*/*/5_Calibration/CTD/*cation*.txt"))
@@ -83,7 +88,10 @@ def main():
         dupes = dupes.sort_values("File")
         dupes['directory'] = dupes.fn.astype(str).str[10:-13]
         dupes_clean = dupes[['directory', 'File']]
-        mailer("bad-ctd-locfiles", f"duplicate entries accross ctd location files, {dupes_clean}")
+        for good_dupe in expected_duplicates:
+            dupes_clean = dupes_clean[dupes_clean.File != good_dupe]
+        if not dupes_clean.empty:
+            mailer("bad-ctd-locfiles", f"duplicate entries accross ctd location files, {dupes_clean}")
 
     if len(missing_ctd_files) > 0:
         mailer(
