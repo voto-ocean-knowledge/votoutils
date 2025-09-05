@@ -3,7 +3,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import logging
+import xarray as xr
 from votoutils.utilities.geocode import locs_to_seas
+from votoutils.sailbuoy.sailbuoy_functions import get_attrs, clean_names_nrt, add_sensors
+from votoutils.utilities import vocabularies
+
 
 _log = logging.getLogger(__name__)
 
@@ -97,10 +101,35 @@ def split_nrt_sailbuoy(
     live_mission = now - df_mission.Time.iloc[-1] < datetime.timedelta(hours=6)
     if long_mission and all_missions or live_mission:
         make_sailbuoy_ds(df_mission, sb_num, mission_num)
+        make_sailbuoy_ds_legacy(df_mission, sb_num, mission_num)
     return mission_num
 
 
 def make_sailbuoy_ds(df, sb, mission):
+    ds = xr.Dataset()
+    time_attr = {"name": "time"}
+    ds["time"] = ("time", df.Time, time_attr)
+
+    for col_name in list(df):
+        if col_name in clean_names_nrt.keys():
+            name = clean_names_nrt[col_name]
+            ds[name] = ("time", df[col_name], vocabularies.vocab_attrs[name])
+        else:
+            print(f"fail for {col_name}")
+
+    # cut dataset down to active deployed period
+    # todo
+    ds = get_attrs(ds, f'SB{sb}', postscript='R')
+    ds = add_sensors(ds)
+    ds.attrs["variables"] = list(ds.variables)
+    ds["trajectory"] = xr.DataArray(1, attrs={"cf_role": "trajectory_id"})
+    directory = Path(f"/data/sailbuoy/nrt/{ds.attrs['platform_serial']}")
+    if not directory.exists():
+        directory.mkdir(parents=True)
+    ds.to_netcdf(directory / f"{ds.attrs['id']}.nc")
+
+
+def make_sailbuoy_ds_legacy(df, sb, mission):
     df =  df.rename({'Time': 'time'}, axis=1)
     df.index = df.time
     ds = df.to_xarray()
