@@ -264,7 +264,9 @@ def datasets_to_emodnet(df_datasets):
         df_datasets = df_datasets[df_datasets.datasetID.str.contains("SEA")]
         df_datasets["voto_datasetid"] = df_datasets.datasetID.str[5:]
         emodent_datasets = df_datasets.voto_datasetid.values
+        emodent_datasets = [name.lower() for name in emodent_datasets]
         check_names = list(df_nrt.index) + list(df_delayed.index)
+        check_names = [name.lower() for name in check_names]
         lost_datasets = set(check_names).difference(set(emodent_datasets))
         most_recent_emodnet = df_datasets["maxTime (UTC)"].max()
         most_recent_datasetid = df_datasets.iloc[df_datasets["maxTime (UTC)"].argmax()][
