@@ -229,6 +229,8 @@ def filter_territorial_data(ds):
     for var_name in list(ds):
         if not any(substring in var_name.lower() for substring in flag_terms):
             continue
+        if "pressure" in var_name.lower():
+            continue
         if ds[var_name].dtype == np.dtype("<M8[ns]"):
             _log.warning(
                 f"Will not flag territorial seas for {var_name}. dtype is {ds[var_name].dtype}",
@@ -239,21 +241,6 @@ def filter_territorial_data(ds):
         ds[var_name].attrs["comment"] = f'{ds[var_name].attrs["comment"]}. {comment}'
     return ds
 
-
-def filter_adcp_data(ds, good_dives):
-    if all(good_dives):
-        _log.info("No dives found within Swedish territorial waters")
-        return ds
-    else:
-        percent_remove = sum(~good_dives) / len(good_dives) * 100
-        _log.warning(
-            f"Dives found within Swedish territorial seas. Will remove {int(percent_remove)} % of data",
-        )
-    for var_name in list(ds):
-        _log.info(f"Flag territorial seas for {var_name}")
-        ds[var_name].values[~good_dives, :, :] = np.nan
-        ds[var_name].attrs["comment"] = f'{ds[var_name].attrs["comment"]}. {comment}'
-    return ds
 
 
 if __name__ == "__main__":

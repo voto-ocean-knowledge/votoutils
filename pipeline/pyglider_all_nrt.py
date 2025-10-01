@@ -19,7 +19,7 @@ logging.basicConfig(
 )
 
 
-def proc_all_nrt(reprocess = False):
+def proc_all_nrt(reprocess = True):
     _log.info("Start nrt reprocessing")
     yml_files = list(pathlib.Path("/data/deployment_yaml/mission_yaml").glob("*.yml"))
     glidermissions = []
@@ -32,7 +32,7 @@ def proc_all_nrt(reprocess = False):
             _log.warning(f"Could not process {fn}")
 
     for platform_serial, mission in glidermissions:
-        if [platform_serial, mission] in missions_no_proc:
+        if (platform_serial, int(mission)) in missions_no_proc:
             _log.info(f"skipping {platform_serial, mission}")
             continue
         input_dir = f"/data/data_raw/nrt/{platform_serial}/{str(mission).zfill(6)}/C-Csv/"

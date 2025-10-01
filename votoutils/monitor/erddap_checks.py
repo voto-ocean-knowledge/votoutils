@@ -262,6 +262,10 @@ def datasets_to_emodnet(df_datasets):
         # drop the allDatasets row and make the datasetID the index for easier reading
         df_datasets = df_datasets[df_datasets.datasetID.str.contains("VOTO")]
         df_datasets = df_datasets[df_datasets.datasetID.str.contains("SEA")]
+        if len(df_datasets) == 0:
+            msg = f"No datasets on emodnet!"
+            mailer("cherddap", msg)
+            return
         df_datasets["voto_datasetid"] = df_datasets.datasetID.str[5:]
         emodent_datasets = df_datasets.voto_datasetid.values
         emodent_datasets = [name.lower() for name in emodent_datasets]

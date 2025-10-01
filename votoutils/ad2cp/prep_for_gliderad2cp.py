@@ -64,7 +64,7 @@ def convert_from_ad2cp(dir_in, outfile, reprocess=False):
 
 
 def convert_ad2cp_to_nc(
-    mission_dir, upload_script="upload_adcp_erddap.sh", upload=True
+    mission_dir, upload=True
 ):
     _log.debug(f"copy ad2cp data for {mission_dir}")
     if "XXX" in str(mission_dir):
@@ -94,16 +94,15 @@ def convert_ad2cp_to_nc(
         if req in df.url.values:
             _log.debug(f"destination file {nc_out_file} already on erddap")
             return
-        for script in ["upload_adcp.sh", upload_script]:
-            subprocess.check_call(
-                [
-                    "/usr/bin/bash",
-                    str(sync_script_dir / script),
-                    str(platform_serial),
-                    str(mission),
-                    str(nc_out_file),
-                ],
-            )
+        subprocess.check_call(
+            [
+                "/usr/bin/bash",
+                str(sync_script_dir / "upload_adcp.sh"),
+                str(platform_serial),
+                str(mission),
+                str(nc_out_file),
+            ],
+        )
         msg = f"uploaded ADCP data {nc_out_file} for {platform_serial} M{mission}"
         mailer("uploaded ADCP", msg)
         return
@@ -130,16 +129,15 @@ def convert_ad2cp_to_nc(
         shutil.copy(source_file, destination_file)
     convert_from_ad2cp(destination_dir, nc_out_file)
     if upload:
-        for script in ["upload_adcp.sh", upload_script]:
-            subprocess.check_call(
-                [
-                    "/usr/bin/bash",
-                    str(sync_script_dir / script),
-                    str(platform_serial),
-                    str(mission),
-                    str(nc_out_file),
-                ],
-            )
+        subprocess.check_call(
+            [
+                "/usr/bin/bash",
+                str(sync_script_dir / "upload_adcp.sh"),
+                str(platform_serial),
+                str(mission),
+                str(nc_out_file),
+            ],
+        )
         msg = f"uploaded ADCP data {nc_out_file} for {platform_serial} M{mission}"
         mailer("uploaded ADCP", msg)
 
