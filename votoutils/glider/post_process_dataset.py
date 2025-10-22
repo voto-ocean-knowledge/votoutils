@@ -119,6 +119,50 @@ def correct_locations(ds):
     return ds
 
 
+def hydrostatic_depth(ds):
+    """Hydrostatic depth calculation based on temperature, salinity and pressure measurements.
+    The standard depth computation of pyglider assumes a standard ocean salinity of ~34 PSU,
+    which is not correct for the Baltic Sea. This error leads to a bias in our depth dimension,
+    placing the glider and its data shallower than it actually is. This function returns a
+    more accurate depth calculation. However, the calculation depends on working and calibrated
+    temperature and salinity outputs, which means that this function cannot replace the original
+    (simpler) pyglider depth calculation for the cases of broken/clogged CTDs.
+
+    Parameters:
+        ds (xarray.Dataset): Dataset style input, including variables for pressure (dbar),
+        salinity (in-situ), temperature (in-situ).
+
+    Returns:
+        ds with additional depth_hydrostatic variable"""
+
+    def surface_layer_pot_density(ds):
+        """ compute surface properties to approximate hydrostatic start depth for profiles with
+        start_depth>0
+
+        Returns:
+           mean salinity and temperature between 1-2 dbar depth (to make sure it is within MLD)
+        """
+        ds_surface = ds.where((ds.pressure>1) & (ds.pressure<3))
+        ds_surface = ds_surface.mean()
+        return float(ds_surface.potential_density)
+
+    def compute_depth_hydrostatic(dfprofile):
+        downcast=True if dfprofile["profile_direction"].iloc[0]==1. else False
+        dfprofile = dfprofile[::-1] if not downcast else dfprofile # flip upcasts for hydrostatic calculation
+        start_depth = dfprofile["pressure"].iloc[0]*10**4/(g*surface_pot_density)
+        dfprofile["delta_z"] = -np.gradient(dfprofile["pressure"]*10**4)/(g*dfprofile["potential_density"])
+        dfprofile["depth_hydrostatic"] = -np.nancumsum(dfprofile["delta_z"])+start_depth
+        dfprofile = dfprofile[::-1] if not downcast else dfprofile # flip back upcasts after calculation
+        return dfprofile
+
+    g = 9.82 # best approximate value for Baltic Sea latitude
+    surface_pot_density = surface_layer_pot_density(ds)
+    df = ds.to_pandas() # much better performance of pandas compared to xarray
+    df = df.groupby("profile_num").apply(compute_depth_hydrostatic)
+    ds["depth_hydrostatic"] = df.droplevel('profile_num')["depth_hydrostatic"]
+    return ds
+
+
 def post_process(ds):
     _log.info("start post process")
     ds = salinity_pressure_correction(ds)
@@ -131,6 +175,7 @@ def post_process(ds):
     ds = fix_variables(ds)
     ds = nan_bad_depths(ds)
     ds = correct_locations(ds)
+    ds = hydrostatic_depth(ds)
     ds = ds.sortby("time")
     _log.info("complete post process")
     return ds
