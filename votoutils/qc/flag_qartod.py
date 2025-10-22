@@ -11,6 +11,7 @@ import logging
 _log = logging.getLogger(__name__)
 
 cond_temp_vars = ["potential_density", "density", "potential_temperature"]
+location_bbox_baltic = [7, 53, 26, 65]
 
 
 def get_configs():
@@ -23,7 +24,6 @@ def get_configs():
                         "fail_span": [-2, 2000],
                     },
                     "spike_test": {"suspect_threshold": 2.0, "fail_threshold": 6.0},
-                    "location_test": {"bbox": [10, 50, 25, 70]},
                 },
             },
         },
@@ -35,7 +35,6 @@ def get_configs():
                         "fail_span": [-2, 2000],
                     },
                     "spike_test": {"suspect_threshold": 2.0, "fail_threshold": 6.0},
-                    "location_test": {"bbox": [10, 50, 25, 70]},
                 },
             },
         },
@@ -47,7 +46,6 @@ def get_configs():
                         "fail_span": [-2.5, 40],
                     },
                     "spike_test": {"suspect_threshold": 2.0, "fail_threshold": 6.0},
-                    "location_test": {"bbox": [10, 50, 25, 70]},
                 },
             },
         },
@@ -61,7 +59,6 @@ def get_configs():
                 "qartod": {
                     "gross_range_test": {"suspect_span": [5, 38], "fail_span": [2, 41]},
                     "spike_test": {"suspect_threshold": 0.3, "fail_threshold": 0.9},
-                    "location_test": {"bbox": [10, 50, 25, 70]},
                 },
             },
         },
@@ -69,7 +66,6 @@ def get_configs():
             "conductivity": {
                 "qartod": {
                     "gross_range_test": {"suspect_span": [5, 42], "fail_span": [2, 45]},
-                    "location_test": {"bbox": [10, 50, 25, 70]},
                 },
             },
         },
@@ -81,7 +77,6 @@ def get_configs():
                         "fail_span": [0, 500],
                     },
                     "spike_test": {"suspect_threshold": 10, "fail_threshold": 50},
-                    "location_test": {"bbox": [10, 50, 25, 70]},
                 },
             },
         },
@@ -93,7 +88,6 @@ def get_configs():
                         "fail_span": [-1, 20],
                     },
                     "spike_test": {"suspect_threshold": 1, "fail_threshold": 5},
-                    "location_test": {"bbox": [10, 50, 25, 70]},
                 },
             },
         },
@@ -104,7 +98,6 @@ def get_configs():
                         "suspect_threshold": 0.0001,
                         "fail_threshold": 0.001,
                     },
-                    "location_test": {"bbox": [10, 50, 25, 70]},
                 },
             },
             "longitude": {
@@ -123,7 +116,6 @@ def get_configs():
                         "suspect_threshold": 0.0001,
                         "fail_threshold": 0.001,
                     },
-                    "location_test": {"bbox": [10, 50, 25, 70]},
                 },
             },
             "longitude": {
@@ -170,6 +162,8 @@ def apply_ioos_flags(ds, config):
 
 def flag_ioos(ds):
     configs = get_configs()
+    for config_name, config in configs.items():
+        config[config_name]['qartod']['location_test'] = {'bbox': location_bbox_baltic}
     # If the glider has a GPCTD, use this for the salinity config
     if ds["conductivity"].attrs["units"] == "S m-1":
         configs["salinity"]["conductivity"]["qartod"]["gross_range_test"] = {

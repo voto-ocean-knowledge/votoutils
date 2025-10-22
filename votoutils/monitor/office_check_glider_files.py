@@ -135,7 +135,7 @@ def list_missions(to_skip=()):
             continue
         non_proc = proj / "1_Downloaded"
         if non_proc.is_dir():
-            proj_glider_dirs = non_proc.glob("S*")
+            proj_glider_dirs = list(non_proc.glob("SEA*")) + list(non_proc.glob("SHW*"))
             glider_dirs.append(list(proj_glider_dirs))
             continue
         sub_dirs = proj.glob("*")

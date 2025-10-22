@@ -11,6 +11,9 @@ import logging
 
 _log = logging.getLogger(__name__)
 
+jammed_missions = [("SEA044", 106),
+                  ("SEA067", 73),
+                  ("SEA063", 88),]
 
 def calculate_bbp(ds, beam_angle=117):
     # https://oceanobservatories.org/wp-content/uploads/2015/10/1341-00540_Data_Product_SPEC_FLUBSCT_OOI.pdf
@@ -105,6 +108,17 @@ def nan_bad_depths(ds):
     ds["pressure"][ds["pressure"] > int(ds["pressure"].attrs["valid_max"])] = np.nan
     return ds
 
+
+def remove_jammed_locations(ds):
+    attrs = ds.attrs
+    if (attrs["platform_serial"], int(attrs["deployment_id"])) not in jammed_missions:
+        return ds
+    for coord in ['latitude', 'longitude']:
+        ds[coord].values[ds.longitude.values > 18] = np.nan
+        ds[coord].attrs['comment'] += 'This mission suffered from extensive GPS jamming. Affected lon and lat have been replace with nan'
+    return ds
+
+
 def correct_locations(ds):
     ds = flag_bad_locations(ds)
     ds = nan_bad_locations(ds)
@@ -112,10 +126,11 @@ def correct_locations(ds):
     lon = ds.longitude[qc_good].values
     lat = ds.latitude[qc_good].values
     ds.attrs["basin"] = locs_to_seas(lon[::10], lat[::10])
-    ds.attrs["geospatial_lon_min"] = np.nanmin(lon)
-    ds.attrs["geospatial_lon_max"] = np.nanmax(lon)
-    ds.attrs["geospatial_lat_min"] = np.nanmin(lat)
-    ds.attrs["geospatial_lat_max"] = np.nanmax(lat)
+    if len(lon>0) and len(lat)>0:
+        ds.attrs["geospatial_lon_min"] = np.nanmin(lon)
+        ds.attrs["geospatial_lon_max"] = np.nanmax(lon)
+        ds.attrs["geospatial_lat_min"] = np.nanmin(lat)
+        ds.attrs["geospatial_lat_max"] = np.nanmax(lat)
     return ds
 
 
@@ -168,6 +183,7 @@ def post_process(ds):
     ds = salinity_pressure_correction(ds)
     ds = correct_rbr_lag(ds)
     ds = recalc_oxygen(ds)
+    ds = remove_jammed_locations(ds)
     ds = process_altimeter(ds)
     ds = filter_territorial_data(ds)
     if "backscatter_scaled" in list(ds):

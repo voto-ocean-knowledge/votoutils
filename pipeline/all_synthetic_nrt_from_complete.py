@@ -5,6 +5,7 @@ import datetime
 import polars as pl
 import shutil
 import gzip
+from votoutils.utilities.utilities import missions_no_proc
 
 _log = logging.getLogger(__name__)
 logging.basicConfig(
@@ -150,6 +151,8 @@ def all_nrt_from_complete(reprocess=True):
         for mission_path in mission_paths:
             platform_serial = glider_path.parts[-1]
             mission = int(mission_path.parts[-1][1:])
+            if (platform_serial, mission) in missions_no_proc:
+                _log.info(f"mission {platform_serial} M{mission} is in missions no proc. skipping")
             nrt_path = Path(
                 f"/data/data_raw/nrt/{platform_serial}/{str(mission).zfill(6)}/C-Csv/",
             )

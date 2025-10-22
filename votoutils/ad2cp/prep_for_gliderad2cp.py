@@ -17,6 +17,11 @@ with open(secrets_dir / "email_secrets.json") as json_file:
     secrets = json.load(json_file)
 nortek_jar_path = secrets["nortek_jar_path"]
 
+expected_failures = [
+    ('SEA066', 45),
+    ('SEA068', 45),
+]
+
 df = pd.read_csv(
     "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/ad2cp.csvp?url"
 )
@@ -60,7 +65,7 @@ def convert_from_ad2cp(dir_in, outfile, reprocess=False):
 
 
 def convert_ad2cp_to_nc(
-    mission_dir, upload_script="upload_adcp_erddap.sh", upload=True
+    mission_dir, upload=True
 ):
     _log.debug(f"copy ad2cp data for {mission_dir}")
     if "XXX" in str(mission_dir):
@@ -79,6 +84,8 @@ def convert_ad2cp_to_nc(
     glider_str, mission_str = dir_parts[-1].split("_")
     platform_serial = glider_str
     mission = int(mission_str[1:])
+    if (platform_serial, mission) in expected_failures:
+        return
     destination_file = destination_dir / f"{platform_serial}_M{mission}.ad2cp"
     nc_out_fn = f"{platform_serial}_M{mission}.ad2cp.00000.nc"
     nc_out_file = destination_dir / nc_out_fn
@@ -88,16 +95,15 @@ def convert_ad2cp_to_nc(
         if req in df.url.values:
             _log.debug(f"destination file {nc_out_file} already on erddap")
             return
-        for script in ["upload_adcp.sh", upload_script]:
-            subprocess.check_call(
-                [
-                    "/usr/bin/bash",
-                    str(sync_script_dir / script),
-                    str(platform_serial),
-                    str(mission),
-                    str(nc_out_file),
-                ],
-            )
+        subprocess.check_call(
+            [
+                "/usr/bin/bash",
+                str(sync_script_dir / "upload_adcp.sh"),
+                str(platform_serial),
+                str(mission),
+                str(nc_out_file),
+            ],
+        )
         msg = f"uploaded ADCP data {nc_out_file} for {platform_serial} M{mission}"
         mailer("uploaded ADCP", msg)
         return
@@ -124,16 +130,15 @@ def convert_ad2cp_to_nc(
         shutil.copy(source_file, destination_file)
     convert_from_ad2cp(destination_dir, nc_out_file)
     if upload:
-        for script in ["upload_adcp.sh", upload_script]:
-            subprocess.check_call(
-                [
-                    "/usr/bin/bash",
-                    str(sync_script_dir / script),
-                    str(platform_serial),
-                    str(mission),
-                    str(nc_out_file),
-                ],
-            )
+        subprocess.check_call(
+            [
+                "/usr/bin/bash",
+                str(sync_script_dir / "upload_adcp.sh"),
+                str(platform_serial),
+                str(mission),
+                str(nc_out_file),
+            ],
+        )
         msg = f"uploaded ADCP data {nc_out_file} for {platform_serial} M{mission}"
         mailer("uploaded ADCP", msg)
 
@@ -147,12 +152,13 @@ def convert_all_ad2cp():
 
 
 if __name__ == "__main__":
-    logf = "/data/log/ad2cp_to_nc.log"
     logging.basicConfig(
-        filename=logf,
-        filemode="a",
         format="%(asctime)s %(levelname)-8s %(message)s",
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.FileHandler("/data/log/ad2cp_to_nc.log"),
+            logging.StreamHandler()
+        ],
     )
     convert_all_ad2cp()

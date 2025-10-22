@@ -16,7 +16,8 @@ bad_dives = [
 def clean_nrt_bad_files(in_dir):
     _log.info(f"Start cleanup of nrt files from {in_dir}")
     in_dir = Path(in_dir)
-    for file_path in in_dir.glob("sea*sub*"):
+    file_paths = in_dir.glob("sea*sub*")
+    for file_path in file_paths:
         fn = file_path.name
         if fn in bad_dives:
             _log.info(f"Removing bad dive {fn}")
@@ -42,8 +43,35 @@ def clean_nrt_bad_files(in_dir):
                 if "time" not in col_name.lower() or col_name == "NOC_SAMPLE_TIME":
                     out = out.with_columns(pl.col(col_name).cast(pl.Float64))
         except (pl.exceptions.ComputeError, pl.exceptions.InvalidOperationError):
-            _log.info(f"Error reading {fn}. Cutting the last line from this file")
-            subprocess.run(["sed", "-i", "$ d", str(file_path)])
+            _log.info(f"Error reading {fn}. Removing whitespace from this file")
+            with open(file_path, 'r') as infile:
+                content = infile.read()
+            content = content.replace(' ', '')
+            with open(file_path, 'w') as infile:
+                infile.write(content)
+            goodlines = []
+            with open(file_path) as f:
+                goodline_len = 0
+                i = 0
+                num_semi = 0
+                for line in f.readlines():
+                    if i > 3:
+                        if not num_semi:
+                            num_semi = line.count(';')
+                        if line.count("9999.0") < 4 and not goodline_len:
+                            goodline_len = len(line)
+                    if line.count(';') < num_semi:
+                        _log.info(f"MISSING ; in {fn}: {line}")
+                        continue
+                    if len(line) + 30 < goodline_len:
+                        _log.info(f"SHORT LINE {fn}: {line}")
+                        continue
+                    goodlines.append(line)
+                    i += 1
+
+            with open(file_path, "w") as f:
+                for line in goodlines:
+                    f.write(line)
     _log.info(f"Complete cleanup of nrt files from {in_dir}")
 
 
@@ -56,5 +84,5 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     _log.info("Start cleanup")
-    clean_nrt_bad_files(Path("/data/data_raw/nrt/SEA044/000090/C-Csv/"))
+    clean_nrt_bad_files(Path("/home/callum/Downloads/test-csv"))
     _log.info("Complete cleanup")
