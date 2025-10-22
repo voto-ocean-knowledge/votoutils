@@ -96,6 +96,8 @@ def split_nrt_sailbuoy(
                     make_sailbuoy_ds(df_mission, sb_num, mission_num)
                 mission_num += 1
     df_mission = df_combi[start_i:]
+    if df_mission.empty:
+        return
     long_mission = df_mission.Time.iloc[-1] - df_mission.Time.iloc[0] > min_mission_time
     now = datetime.datetime.now()
     live_mission = now - df_mission.Time.iloc[-1] < datetime.timedelta(hours=6)
