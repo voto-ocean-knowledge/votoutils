@@ -6,6 +6,8 @@ import pandas as pd
 import subprocess
 from votoutils.upload.sync_functions import sync_script_dir
 from votoutils.utilities.utilities import missions_no_proc
+import logging
+_log = logging.getLogger(__name__)
 
 options = tools.get_options(xaxis=1, yaxis=None, shear_bias_regression_depth_slice=(10, 1000))
 
@@ -27,12 +29,15 @@ def remove_territorial_waters_adcp(infile_path, gliderfile_path, outfile_path, p
     config = xr.open_dataset(infile_path, group='Config')
     glider_data = xr.open_dataset(gliderfile_path)
     df_glider = pd.DataFrame(
-        {'altimeter': glider_data.altimeter, 'dive_num': glider_data.dive_num, 'pressure': glider_data.pressure},
+        {'altimeter': glider_data.altimeter, 'dive_num': glider_data.dive_num.astype(int), 'pressure': glider_data.pressure},
         index=glider_data.time)
     df_adcp = pd.DataFrame({'adcp_pressure': ADCP.Pressure}, index=ADCP.time)
     df_adcp_alt = pd.merge_asof(df_adcp, df_glider, left_index=True, right_index=True)
+    df_adcp_alt.loc[np.isnan(df_adcp_alt.dive_num.values), 'dive_num'] = 0
+    df_adcp_alt['dive_num'] = df_adcp_alt['dive_num'].astype(int)
     df_glider_by_dive = df_glider.groupby('dive_num').max().rename(
         {'altimeter': 'max_altimeter', 'pressure': 'max_pressure'}, axis=1)
+    df_adcp_alt = df_adcp_alt.sort_values("dive_num")
     df_adcp_bool = pd.merge_asof(df_adcp_alt, df_glider_by_dive, left_on='dive_num', right_index=True)
     df_adcp_bool['territorial_waters'] = True
     df_adcp_bool.loc[~np.isnan(df_adcp_bool.max_altimeter), 'territorial_waters'] = False
@@ -40,22 +45,25 @@ def remove_territorial_waters_adcp(infile_path, gliderfile_path, outfile_path, p
     df_adcp_bool.loc[df_adcp_bool.pressure < (df_adcp_bool.max_pressure - pressure_margin), 'near_seabed'] = False
     df_adcp_bool['territorial_near_seabed'] = np.logical_and(df_adcp_bool['territorial_waters'],
                                                              df_adcp_bool['near_seabed'])
-    percent_remove = sum(df_adcp_bool['territorial_near_seabed']) / len(df_adcp_bool) * 100
-    for var_name in ADCP.variables:
-        if 'Beam' not in var_name:
-            continue
-        data = ADCP[var_name].values
-        if data.shape[0] != len(df_adcp_bool):
-            continue
-        print(
-            f"Dives found within Swedish territorial seas. Will remove {int(percent_remove)} % of data from {var_name}")
+    if sum(df_adcp_bool['territorial_near_seabed']):
+        percent_remove = sum(df_adcp_bool['territorial_near_seabed']) / len(df_adcp_bool) * 100
+        for var_name in ADCP.variables:
+            if 'Beam' not in var_name:
+                continue
+            data = ADCP[var_name].values
+            if data.shape[0] != len(df_adcp_bool):
+                continue
+            _log.info(
+                f"Dives found within Swedish territorial seas. Will remove {int(percent_remove)} % of data from {var_name}")
 
-        data[df_adcp_bool['territorial_near_seabed'], :] = np.nan
-        ADCP[var_name].attrs[
-            'comment'] = (f'Post-conversion, processing was performed to remove collected from within the deepest'
-                          f' {pressure_margin} dbar of the glider dive when the glider was within territorial waters.'
-                          f' This processing removed {round(percent_remove, 1)} % of data points. Contact callum.rollo@voiceoftheocean.org for more information')
-        ADCP[var_name].values = data
+            data[df_adcp_bool['territorial_near_seabed'], :] = np.nan
+            ADCP[var_name].attrs[
+                'comment'] = (f'Post-conversion, processing was performed to remove collected from within the deepest'
+                              f' {pressure_margin} dbar of the glider dive when the glider was within territorial waters.'
+                              f' This processing removed {round(percent_remove, 1)} % of data points. Contact callum.rollo@voiceoftheocean.org for more information')
+            ADCP[var_name].values = data
+    else:
+        _log.info("no data in territorial water. Copying as-is")
     ADCP.to_netcdf(outfile_path, "w", group="Data/Average", format="NETCDF4")
     config.to_netcdf(outfile_path, "a", group="Config", format="NETCDF4")
 
