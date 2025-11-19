@@ -83,9 +83,15 @@ clean_names = {
 
 def add_sensors(ds, sensors):
     for sensor_id, serial_dict in sensors.items():
-        sensor_dict = vocabularies.sensor_vocabs[serial_dict["sensor"]]
+        make_model = serial_dict['make_model']
+        if make_model in ['Sailbuoy datalogger', 'Sailbuoy autopilot']:
+            continue
+        if make_model not in vocabularies.sensor_vocabs.keys():
+            _log.warning(f"could not find sensor {make_model} in vocabs dict. Skipping")
+            continue
+        sensor_dict = vocabularies.sensor_vocabs[make_model]
         for key, item in serial_dict.items():
-            if key == "sensor":
+            if key == "make_model":
                 continue
             sensor_dict[key] = item
         ds.attrs[sensor_id] = str(sensor_dict)
@@ -114,6 +120,68 @@ def parse_nbosi(input_dir, output_dir):
     if not out_dir.exists():
         out_dir.mkdir()
     df.to_parquet(out_dir / "NBOSI.pqt")
+
+
+def parse_aanderaa_ctd(input_dir, output_dir):
+    dt = datetime.datetime(1970, 1, 1)
+    temperature = []
+    conductivity = []
+    sample_time = []
+    with open(input_dir / "AADICOND.TXT", encoding="latin") as infile:
+        for line in infile.readlines():
+            if "Sensorlog opened" in line:
+                dt = datetime.datetime.strptime(line[17:36], "%d.%m.%Y %H:%M:%S")
+            if 'MEASUREMENT' in line:
+                try:
+                    __, __, __, __, cond,__, temp = line.replace('\n', '').split('\t')
+                    temperature.append(float(temp))
+                    conductivity.append(float(cond))
+                    sample_time.append(dt)
+                except:
+                    continue
+    df = pd.DataFrame({'datetime': sample_time, 'CNDC': conductivity, 'TEMP': temperature})
+    df = df.set_index("datetime").sort_index()
+    out_dir = output_dir
+    if not out_dir.exists():
+        out_dir.mkdir()
+    df.to_parquet(out_dir / "AADICOND.pqt")
+
+def parse_aanderaa_adcp(input_dir, output_dir):
+    dt = datetime.datetime(1970, 1, 1)
+    dicts = []
+    measurement_dict = {}
+    with open(input_dir / "DCPS.TXT") as infile:
+        for line in infile.readlines():
+
+            if "Sensorlog opened" in line:
+                dt = datetime.datetime.strptime(line[17:36], "%d.%m.%Y %H:%M:%S")
+
+            if 'MEASUREMENT' in line:
+                if measurement_dict:
+                    dicts.append(measurement_dict)
+                parts = line.replace('\n','').split('\t')[3:]
+                if len(parts) % 2 == 1:
+                    parts = parts[:-1]
+                keys = parts[::2]
+                values = parts[1::2]
+                measurement_dict = {key:val for key, val in zip(keys, values)}
+                measurement_dict['datetime'] = dt
+            if line[:4] == 'Cell':
+                parts = line.split()
+                cell_num = parts[1]
+                u = parts[-3]
+                v = parts[-1]
+                measurement_dict[f"water_u_cell_{cell_num}"] = u
+                measurement_dict[f"water_v_cell_{cell_num}"] = v
+    if measurement_dict:
+        dicts.append(measurement_dict)
+
+    df = pd.DataFrame(dicts)
+    df = df.set_index("datetime").sort_index()
+    out_dir = output_dir
+    if not out_dir.exists():
+        out_dir.mkdir()
+    df.to_parquet(out_dir / "DCPS.pqt")
 
 
 def parse_airmar(input_dir, output_dir):
@@ -145,8 +213,10 @@ def parse_airmar(input_dir, output_dir):
                 continue
             if talker == "WIXDR":
                 talker += line.split(",")[1]
-            if talker == "WIMWV":
+            elif talker == "WIMWV":
                 talker += line.split(",")[2]
+            elif talker =="YXXDR" and "RAT" in line:
+                talker += "A_RATE"
             elif talker == "YXXDR":
                 talker += f'_{line.split(",")[1]}'
             if talker not in messages.keys():
@@ -231,6 +301,8 @@ def parse_data(data_dir, output_dir):
         line = line.replace(' ', '').replace('\n', '')
         items = line.split(',')
         for item in items:
+            if '=' not in item:
+                continue
             key, val = item.split('=')
             if val == "NULL":
                 val = ""
@@ -686,7 +758,7 @@ def export_netcdf(output_dir, yml_dict):
     ds = xr.Dataset()
     time_attr = {"name": "time"}
     ds["time"] = ("time", df.index, time_attr)
-    platform_serial = yml_dict['metadata']['platform_id']
+    platform_serial = yml_dict['metadata']['platform_serial']
     if platform_serial == "SB2017":
         print("adding fake pressure for NBOSI")
         df['PRES'] = 0
@@ -734,8 +806,11 @@ def merge_intermediate(intermediate_dir, output_dir):
             if col_name in clean_names.keys():
                 df = df.rename({col_name: clean_names[col_name]}, axis=1)
         dropped_cols = set(list(df)).difference(set(clean_names.values()))
-        keep_cols = list(set(clean_names.values()).intersection(set(list(df)))) 
-        print(f"From {infile.name} keep: {keep_cols}. Dropping {dropped_cols} ")
+        keep_cols = list(set(clean_names.values()).intersection(set(list(df))))
+        if dropped_cols:
+            _log.info(f"From {infile.name} keep: {keep_cols}. Dropping {dropped_cols} ")
+        else:
+            _log.info(f"From {infile.name} keep: {keep_cols}")
         df = df[keep_cols]
         if df_merged.empty:
             df_merged = df

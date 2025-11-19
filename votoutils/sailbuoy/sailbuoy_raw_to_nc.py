@@ -5,11 +5,13 @@ _log = logging.getLogger(__name__)
 
 from votoutils.sailbuoy.sailbuoy_functions import parse_nbosi, \
     parse_airmar, parse_data, parse_nrt, parse_legato, parse_gmx560, parse_mose, \
-    export_netcdf, merge_intermediate
+    export_netcdf, merge_intermediate, parse_aanderaa_ctd, parse_aanderaa_adcp
 
 sensor_to_dir = {
     'RBR legato CTD': 'LEGATO',
     'Neil Brown 100': 'NBOSI',
+    'Aanderaa 4319A': 'AADICOND',
+    'Aanderaa DCPS 5400': 'DCPS',
     'Gill Instruments GMX560': 'MAXIMET',
     'Airmar 200WX': 'AIRMAR',
     'Datawell MOSE-G1000': 'MOSE',
@@ -20,6 +22,8 @@ sensor_to_dir = {
 sensor_to_function = {
     'RBR legato CTD': parse_legato,
     'Neil Brown 100': parse_nbosi,
+    'Aanderaa 4319A': parse_aanderaa_ctd,
+    'Aanderaa DCPS 5400': parse_aanderaa_adcp,
     'Gill Instruments GMX560': parse_gmx560,
     'Airmar 200WX': parse_airmar,
     'Datawell MOSE-G1000': parse_mose,
@@ -44,7 +48,7 @@ class Sailbuoy:
             self.intermediate_dir.mkdir(parents=True)
         with open(self.yaml_path) as fin:
             self.config = yaml.safe_load(fin)
-        self.platform_serial =  self.config['metadata']['platform_id']
+        self.platform_serial =  self.config['metadata']['platform_serial']
         expected_sensors = list(sensor['make_model'] for sensor in self.config['devices'].values())
         expected_dirs = {sensor_to_dir[sensor] for sensor in expected_sensors}
         input_dirs = {path.name for path in self.input_dir.glob('*')}
