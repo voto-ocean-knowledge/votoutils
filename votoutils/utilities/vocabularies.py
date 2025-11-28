@@ -607,4 +607,22 @@ sensor_vocabs = {
         "sensor_model_vocabulary": "http://vocab.nerc.ac.uk/collection/L22/current/TOOL2019/",
         "long_name": "Kongsberg Simrad ES200-7C split-beam echosounder transducer",
     },
+    "Aanderaa 4319A": {
+        "sensor_type": "CTD",
+        "sensor_type_vocabulary": "https://vocab.nerc.ac.uk/collection/L05/current/130/",
+        "sensor_maker": "Aanderaa",
+        "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0007/",
+        "sensor_model": "Aanderaa conductivity sensor 4319A",
+        "sensor_model_vocabulary": "https://vocab.nerc.ac.uk/collection/L22/current/TOOL0626/",
+        "long_name": "Aanderaa conductivity sensor 4319A",
+    },
+    "Aanderaa 5400": {
+        "sensor_type": "ADVs and turbulence probes",
+        "sensor_type_vocabulary": "https://vocab.nerc.ac.uk/collection/L05/current/384/",
+        "sensor_maker": "Aanderaa",
+        "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0007/",
+        "sensor_model": "TBD",
+        "sensor_model_vocabulary": "TBD",
+        "long_name": "Nortek TBD",
+    },
 }
