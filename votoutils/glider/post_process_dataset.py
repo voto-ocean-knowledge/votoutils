@@ -165,6 +165,11 @@ def hydrostatic_depth(ds):
         downcast=True if dfprofile["profile_direction"].iloc[0]==1. else False
         dfprofile = dfprofile[::-1] if not downcast else dfprofile # flip upcasts for hydrostatic calculation
         start_depth = dfprofile["pressure"].iloc[0]*10**4/(g*surface_pot_density)
+        if len(dfprofile["pressure"]) <= 1:
+            dfprofile["delta_z"] = np.full([len(dfprofile["pressure"])], np.nan)
+            dfprofile["depth_hydrostatic"] = np.full([len(dfprofile["pressure"])], np.nan)
+            return dfprofile
+
         dfprofile["delta_z"] = -np.gradient(dfprofile["pressure"]*10**4)/(g*dfprofile["potential_density"])
         dfprofile["depth_hydrostatic"] = -np.nancumsum(dfprofile["delta_z"])+start_depth
         dfprofile = dfprofile[::-1] if not downcast else dfprofile # flip back upcasts after calculation

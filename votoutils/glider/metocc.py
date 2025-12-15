@@ -57,7 +57,7 @@ def create_csv(ds_file):
             meta_ess[key] = val
 
     # Create standard filenames
-    file_name_base = f"SEA{meta['glider_serial']}_M{meta['deployment_id']}"
+    file_name_base = f"{meta['glider_serial']}_M{meta['deployment_id']}"
     sea_name = meta["sea_name"]
     sea_name_clean = sea_name.replace(",", "_").replace(" ", "")
     if "basin" in meta.keys():
@@ -72,6 +72,6 @@ def create_csv(ds_file):
 
     # Write dataframe and metadata to matching files
     df.to_csv(output_dir / f"{file_name_base}.csv")
-    with open(output_dir / f"{file_name_base}.yml", "a", encoding="utf-8") as file:
+    with open(output_dir / f"{file_name_base}.yml", "w", encoding="utf-8") as file:
         yaml.dump(meta_ess, file)
     return output_dir / file_name_base

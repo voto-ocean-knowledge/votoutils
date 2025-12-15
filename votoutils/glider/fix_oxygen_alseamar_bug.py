@@ -77,6 +77,7 @@ bad_oxygen_missions = [
     'SEA056_M82',
     'SEA056_M83',
     'SEA063_M88',
+    'SEA063_M90',
     'SEA067_M68',
     'SEA067_M70',
     'SEA067_M72',
