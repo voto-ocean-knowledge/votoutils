@@ -39,7 +39,7 @@ def proc_nrt():
             continue
         mission_paths.sort()
         mission = str(mission_paths[-1].parts[-2]).lstrip("0")
-        if (platform_serial, mission) in missions_no_proc:
+        if (platform_serial, int(mission)) in missions_no_proc:
             _log.info(f"Will not process {platform_serial}, M{mission} as it is in missions_no_proc")
             return
         _log.info(f"Checking {platform_serial} M{mission}")
