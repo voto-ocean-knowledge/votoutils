@@ -74,7 +74,7 @@ vocab_attrs = {
         "units": "seconds since 1970-01-01 00:00:00 UTC",
         "calendar": "gregorian",
         "axis": "T",
-        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/AYMD/",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/OG1/current/TIME/",
     },
     "AD2CP_TIME": {
         "long_name": "time of measurement",
@@ -83,7 +83,7 @@ vocab_attrs = {
         "units": "seconds since 1970-01-01 00:00:00 UTC",
         "calendar": "gregorian",
         "axis": "T",
-        "vocabulary": "https://vocab.nerc.ac.uk/collection/P02/current/AYMD/",
+        "vocabulary": "http://vocab.nerc.ac.uk/collection/OG1/current/TIME/",
         "comment": "measured by AD2CP",
     },
     "DEPTH": {
@@ -101,6 +101,7 @@ vocab_attrs = {
         "valid_min": 0,
         "valid_max": 2000,
         "reference_datum": "surface",
+        "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/DEPTH/",
         "positive": "down",
     },
     "DOXY": {
@@ -158,7 +159,7 @@ vocab_attrs = {
         "vocabulary": "https://vocab.nerc.ac.uk/collection/OG1/current/PSAL/",
     },
     "TEMP": {
-        "long_name": "Temperature of the water body by CTD ",
+        "long_name": "Temperature of the water body by CTD",
         "observation_type": "measured",
         "standard_name": "sea_water_temperature",
         "units": "Celsius",
@@ -279,7 +280,7 @@ vocab_attrs = {
         "comment": "measured by AD2CP",
     },
     "TEMP_OXYGEN": {
-        "long_name": "Temperature of the water body by CTD ",
+        "long_name": "Temperature of the water body by CTD",
         "observation_type": "measured",
         "standard_name": "sea_water_temperature",
         "comment": "measured by oxygen optode",
@@ -434,7 +435,7 @@ sensor_vocabs = {
         "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0026/",
         "sensor_model": "WET Labs {Sea-Bird WETLabs} ECO Puck Triplet FLBBPC scattering fluorescence sensor",
         "sensor_model_vocabulary": "https://vocab.nerc.ac.uk/collection/L22/current/TOOL1904/",
-        "long_name": " WET Labs ECO FLBBPC",
+        "long_name": "WET Labs ECO FLBBPC",
     },
     "Wetlabs FLBBPE": {
         "sensor_type": "fluorometers",
@@ -459,7 +460,7 @@ sensor_vocabs = {
         "sensor_type_vocabulary": "https://vocab.nerc.ac.uk/collection/L05/current/113/",
         "sensor_maker": "RBR",
         "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0049/",
-        "sensor_model": "RBRtridente: three-channel fluorescence and backscatter sensor",
+        "sensor_model": "RBR tridente scattering fluorescence sensor",
         "sensor_model_vocabulary": "http://vocab.nerc.ac.uk/collection/L22/current/TOOL2149/",
         "long_name": "RBR Tridente",
     },
@@ -487,8 +488,8 @@ sensor_vocabs = {
         "sensor_maker": "RBR",
         "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0049/",
         "sensor_model": "RBR Coda T.ODO Temperature and Dissolved Oxygen Sensor",
-        "sensor_model_vocabulary": "https://vocab.nerc.ac.uk/collection/L22/current/TOOL1783/",
-        "long_name": "RBR Coda T.ODO",
+        "sensor_model_vocabulary": "http://vocab.nerc.ac.uk/collection/L22/current/TOOL1717/",
+        "long_name": "RBR Coda T.ODO Temperature and Dissolved Oxygen Sensor",
     },
     "SeaBird OCR504": {
         "sensor_type": "radiometers",
@@ -497,7 +498,7 @@ sensor_vocabs = {
         "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0013/",
         "sensor_model": "Satlantic {Sea-Bird} OCR-504 multispectral radiometer",
         "sensor_model_vocabulary": "https://vocab.nerc.ac.uk/collection/L22/current/TOOL0625/",
-        "long_name": "Sea-Bird OCR-504 ",
+        "long_name": "Sea-Bird OCR-504",
     },
     "Seabird Deep SUNA": {
         "sensor_type": "nutrient analysers",
@@ -506,7 +507,7 @@ sensor_vocabs = {
         "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0013/",
         "sensor_model": "Satlantic {Sea-Bird} Submersible Ultraviolet Nitrate Analyser V2 (SUNA V2) nutrient analyser series",
         "sensor_model_vocabulary": "https://vocab.nerc.ac.uk/collection/L22/current/TOOL1562/",
-        "long_name": "Sea-Bird SUNA ",
+        "long_name": "Sea-Bird SUNA",
     },
     "Franatech METS": {
         "sensor_type": "dissolved gas sensors",
@@ -515,7 +516,7 @@ sensor_vocabs = {
         "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0303/",
         "sensor_model": "Franatech METS Methane Sensor",
         "sensor_model_vocabulary": "https://vocab.nerc.ac.uk/collection/L22/current/TOOL1244/",
-        "long_name": "Franatech METS Methane Sensor ",
+        "long_name": "Franatech METS Methane Sensor",
     },
     "Biospherical MPE-PAR": {
         "sensor_type": "radiometers",
@@ -562,6 +563,9 @@ sensor_vocabs = {
         "sensor_model_vocabulary": "https://vocab.nerc.ac.uk/collection/L22/current/TOOL0037/",
         "long_name": "Sea-Bird SBE 43F",
     },
+}
+
+sailbuoy_sensors_vocabs = {
     "Gill Instruments GMX560": {
         "sensor_type": "meteorological packages",
         "sensor_type_vocabulary": "https://vocab.nerc.ac.uk/collection/L05/current/102/",
@@ -577,7 +581,7 @@ sensor_vocabs = {
         "sensor_maker": "Datawell B.V.",
         "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0124/",
         "sensor_model": "Datawell MOSE-G1000",
-        "sensor_model_vocabulary": "Datawell MOSE-G1000",
+        "sensor_model_vocabulary": "http://vocab.nerc.ac.uk/collection/L22/current/TOOL1027/",
         "long_name": "Datawell MOSE-G1000",
     },
     "Airmar 200WX": {
@@ -608,21 +612,76 @@ sensor_vocabs = {
         "long_name": "Kongsberg Simrad ES200-7C split-beam echosounder transducer",
     },
     "Aanderaa 4319A": {
-        "sensor_type": "CTD",
-        "sensor_type_vocabulary": "https://vocab.nerc.ac.uk/collection/L05/current/130/",
+        "sensor_type": "salinity sensor",
+        "sensor_type_vocabulary": "https://vocab.nerc.ac.uk/collection/L05/current/350/",
         "sensor_maker": "Aanderaa",
         "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0007/",
         "sensor_model": "Aanderaa conductivity sensor 4319A",
         "sensor_model_vocabulary": "https://vocab.nerc.ac.uk/collection/L22/current/TOOL0626/",
         "long_name": "Aanderaa conductivity sensor 4319A",
     },
-    "Aanderaa 5400": {
-        "sensor_type": "ADVs and turbulence probes",
-        "sensor_type_vocabulary": "https://vocab.nerc.ac.uk/collection/L05/current/384/",
-        "sensor_maker": "Aanderaa",
-        "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0007/",
-        "sensor_model": "TBD",
-        "sensor_model_vocabulary": "TBD",
-        "long_name": "Nortek TBD",
-    },
+
 }
+
+
+if __name__ == '__main__':
+    import yaml
+    sensor_vocabs_clean = {}
+    for key, val in sensor_vocabs.items():
+        for entry_key, entry_val in val.items():
+            val[entry_key] = entry_val.replace('https:', 'http:')
+        sensor_vocabs_clean[val['sensor_model']] = val
+
+
+    with open("/home/callum/Documents/community/ocean-gliders-format-vocabularies/yaml/draft_yaml/voto_sensors.yaml", "w") as fin:
+        yaml.dump(sensor_vocabs_clean, fin, width=120)
+
+    variables_clean = {}
+    glider_vars = [
+ 'AD2CP_TIME',
+ 'DOXY',
+ 'CHLA',
+ 'CNDC',
+ 'PRES',
+ 'PSAL',
+ 'TEMP',
+ 'THETA',
+ 'DENSITY',
+ 'PHASE',
+ 'PRES_ADCP',
+ 'BBP700',
+ 'RBBP700',
+ 'ED380',
+ 'ED490',
+ 'DPAR',
+ 'PITCH',
+ 'ROLL',
+ 'HEADING',
+ 'AD2CP_PITCH',
+ 'AD2CP_ROLL',
+ 'AD2CP_HEADING',
+ 'TEMP_OXYGEN',
+ 'POTDENS0',
+ 'FLUOCHLA',
+ 'TURB',
+ 'TCPUCHLA',
+ 'CDOM',
+ 'FLUOCDOM',
+ 'PHYC',
+ 'FLUOPHYC',
+ 'PHYCOCYANIN',
+ 'EPSIFY01',
+ 'EPSIFY02',]
+    for key, val in vocab_attrs.items():
+        if key not in glider_vars:
+            continue
+        if 'sensor' in val.keys():
+           val.pop('sensor')
+        if 'vocabulary' not in val.keys():
+            continue
+        for entry_key, entry_val in val.items():
+            if type(entry_val) is str:
+                val[entry_key] = entry_val.replace('https:', 'http:')
+        variables_clean[key] = val
+    with open("/home/callum/Documents/community/ocean-gliders-format-vocabularies/yaml/draft_yaml/voto_variables.yaml", "w") as fin:
+        yaml.dump(variables_clean, fin, width=120)
