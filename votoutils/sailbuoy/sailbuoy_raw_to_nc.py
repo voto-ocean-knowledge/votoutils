@@ -68,7 +68,7 @@ class Sailbuoy:
                 continue
             outfile = self.intermediate_dir / f"{sensor_dir}.pqt"
             if outfile.exists() and not self.reprocess_raw:
-                _log.info(f"{sensor}: {sensor_dir} already processed, skipping")
+                _log.info(f"{sensor}: {sensor_dir} already processed as {outfile}, skipping")
                 continue
             _log.info(f"Process {sensor}")
             proc_function(self.input_dir / sensor_dir, self.intermediate_dir)
@@ -76,6 +76,7 @@ class Sailbuoy:
 
     def merge_intermediate(self):
         merge_intermediate(self.intermediate_dir, self.output_dir)
+        _log.info("Wrote intermediate")
 
     def export_netcdf(self):
         export_netcdf(self.output_dir, self.config)
@@ -93,7 +94,7 @@ if __name__ == "__main__":
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    id=2017
+    id=2121
     if id==2017:
         sb = Sailbuoy(
             "/mnt/samba/43_Hudson Bay Sailbuoy 2/3_Non_Processed/SB2017/SB2017_M7",
@@ -103,7 +104,7 @@ if __name__ == "__main__":
     elif id==2121:
         sb = Sailbuoy(
             "/mnt/samba/45_SkaMix/3_Non_Processed/SB2121/SB2121_M2",
-            "/home/callum/Downloads/tmpsb/SB2121/M2",
+            "/home/callum/Downloads/tmp_new/SB2121/M2",
             "/home/callum/Documents/data-flow/raw-to-nc/deployment-yaml/sailbuoy_yaml/SB2121_M2.yml"
         )
         sb.platform_serial = "SB2121"
@@ -113,4 +114,4 @@ if __name__ == "__main__":
             "/home/callum/Downloads/tmpsb/SB2120/M3",
                     "/home/callum/Documents/data-flow/raw-to-nc/deployment-yaml/sailbuoy_yaml/SB2120_M3.yml"
         )
-    sb.parse_sensors()
+    sb.process()

@@ -40,56 +40,15 @@ clean_names_nrt = {
      'RBRL_Sal': 'PSAL',
 }
 
-clean_names = {
-    "lat": "LATITUDE",
-    "lon": "LONGITUDE",
-    "Lat": "LATITUDE",
-    "Long": "LONGITUDE",
-    "time": "TIME",
-    "pitch": "PITCH",
-    "roll": "ROLL",
-    "pitch_degrees": "PITCH",
-    "roll_degrees": "ROLL",
-    "heading_magnetic": "HEADING",
-    "pressure_legato": "PRES",
-    "Conductivity": "CNDC",
-    "CTCond": "CNDC",
-    "oxygen_concentration": "DOXY",
-    "chlorophyll": "CHLA",
-    "RBRL_T": "TEMP",
-    #"Temperature": "TEMP", collision in SB2121 nrt where Temperature is something else. There temp is from RBR
-    "RBRL_C": "CNDC",
-    "RBRL_Sal": "PSAL",
-    "CTTemp": "TEMP",
-    "wind_direction_true": "WIND_DIRECTION",
-    "windspeed_true": "WIND_SPEED",
-    "wind_direction_true_degrees": "WIND_DIRECTION",
-    "wind_speed_m_s": "WIND_SPEED",
-    "air_temperature_celcius": "TEMP_AIR",
-    "air_temperature": "TEMP_AIR",
-    "air_pressure": "PRESSURE_AIR",
-    "air_pressure_bar": "PRESSURE_AIR",
-    "humidity_%": "HUMIDITY",
-    "relative_humidity_%": "HUMIDITY",
-    "significant_wave_height": "significant_wave_height",
-    "significant_wave_period": "significant_wave_period",
-    "mean_wave_period": "mean_wave_period",
-    "maximum_wave_height": "maximum_wave_height",
-    "percentage_error_lines": "percentage_error_lines",
-    "vert_m": "vertical_displacement",
-    "north_m": "northward_displacement",
-    "west_m": "westward_displacement",
-}
-
 def add_sensors(ds, sensors):
     for sensor_id, serial_dict in sensors.items():
         make_model = serial_dict['make_model']
         if make_model in ['Sailbuoy datalogger', 'Sailbuoy autopilot']:
             continue
-        if make_model not in vocabularies.sensor_vocabs.keys():
+        if make_model not in vocabularies.sailbuoy_sensors_vocabs.keys():
             _log.warning(f"could not find sensor {make_model} in vocabs dict. Skipping")
             continue
-        sensor_dict = vocabularies.sensor_vocabs[make_model]
+        sensor_dict = vocabularies.sailbuoy_sensors_vocabs[make_model]
         for key, item in serial_dict.items():
             if key == "make_model":
                 continue
@@ -313,6 +272,23 @@ def parse_data(data_dir, output_dir):
     df["datetime"] = pd.to_datetime(df.Time, format="%d.%m.%Y%H:%M:%S")
     df = df.drop(['Time'], axis=1)
     df = df.set_index("datetime").sort_index()
+
+    clean_names_data = {
+        "Lat": "LATITUDE",
+        "Long": "LONGITUDE",
+        "RBRL_T": "TEMP",
+        "RBRL_C": "CNDC",
+        "RBRL_Sal": "PSAL",
+        "CTTemp": "TEMP",
+        "WindDirection": "WIND_DIRECTION",
+        "WindSpeed": "WIND_SPEED",
+        "WindGust": "WIND_GUST",
+        "AirTemp": "TEMP_AIR",
+        "AirPressure": "PRESSURE_AIR",
+        "RelativeHumidity": "HUMIDITY",
+    }
+    df = df.rename(clean_names_data, axis=1)
+    df= df[list(set(df.columns).intersection(set(clean_names_data.values())))]
     df.to_parquet(output_dir / "Data_logger.pqt")
 
 
@@ -387,7 +363,24 @@ def parse_nrt(auto_dir, output_dir):
             )
         )
         mose_nrt.to_parquet(output_dir / "mose_nrt.pqt")
-    df_nrt = data.join(auto, how="outer", lsuffix="_data", rsuffix="_auto")
+    df_nrt = data.join(auto, how="outer", lsuffix="_x", rsuffix="_y")
+    vars_to_merge = [var_name[:-2] for var_name in list(df_nrt) if var_name[-2:] == '_x']
+    for var_base in vars_to_merge:
+        _log.info(f"merging {var_base}")
+        df_nrt.loc[np.isnan(df_nrt[var_base + '_x'].astype(float)), var_base + '_x'] = df_nrt.loc[
+            np.isnan(df_nrt[var_base + '_x'].astype(float)), var_base + '_y'].astype(float)
+        df_nrt = df_nrt.rename({var_base + '_x': var_base}, axis=1)
+        df_nrt = df_nrt.drop([var_base + '_y'], axis=1)
+        df_nrt[var_base] = df_nrt[var_base].astype(float)
+
+    clean_names_auto = {
+        "Lat": "LATITUDE",
+        "Long": "LONGITUDE",
+    }
+    df_nrt = df_nrt.rename(clean_names_auto, axis=1)
+    df_nrt = df_nrt[list(set(df_nrt.columns).intersection(set(clean_names_auto.values())))]
+    
+    
     df_nrt.to_parquet(output_dir / "Auto_pilot.pqt")
 
 
@@ -586,8 +579,25 @@ def parse_gmx560(input_dir, output_dir):
     ).set_index("datetime")
     df_tilt = df_tilt[["eastward_tilt", "northward_tilt", "vertical_orientation"]]
 
-    df_gmx = df_wind_rel.sort_index()
+    gmx_name_dict = {
+        "wind_direction_true": "WIND_DIRECTION",
+        "windspeed_true": "WIND_SPEED",
+        "wind_direction_true_degrees": "WIND_DIRECTION",
+        "wind_speed_m_s": "WIND_SPEED",
+        "air_temperature_celcius": "TEMP_AIR",
+        "air_temperature": "TEMP_AIR",
+        "air_pressure": "PRESSURE_AIR",
+        "air_pressure_bar": "PRESSURE_AIR",
+        "humidity_%": "HUMIDITY",
+        "relative_humidity_%": "HUMIDITY",
+        "pitch": "PITCH",
+        "roll": "ROLL",
+        "heading_magnetic": "HEADING",
+    }
+
+    df_gmx = pd.DataFrame()
     for df_add in [
+        df_wind_rel,
         df_wind_true,
         df_heading,
         df_attitude,
@@ -595,7 +605,13 @@ def parse_gmx560(input_dir, output_dir):
         df_weather_gps,
         df_tilt,
     ]:
-        df_add = df_add.sort_index()
+        df_add = df_add.sort_index().rename(gmx_name_dict, axis=1)
+        df_add = df_add[list(set(df_add.columns).intersection(set(gmx_name_dict.values())))]
+        if df_add.empty:
+            continue
+        if df_gmx.empty:
+            df_gmx = df_add
+            continue
         df_gmx = pd.merge_asof(
             df_gmx,
             df_add,
@@ -624,7 +640,6 @@ def parse_mose(indir, intermediate_dir):
                             goodline = line.replace(" ", "")[:-4] + "\n"
                             locfile.write(goodline)
                     except pynmea2.ParseError:
-                        # print('Parse error: {}'.format(e))
                         continue
     mose = pd.read_csv(
         mose_dir / "mose_good.txt",
@@ -689,6 +704,16 @@ def parse_mose(indir, intermediate_dir):
     mose_loc = mose_loc[mose_loc["height"] > -100]
     mose_loc = mose_loc[["lat", "lon", "height", "hdop", "vdop"]]
     df_mose = mose_high_freq.join(mose_loc, how="outer")
+    clean_names_mose = {
+        "lat": "LATITUDE",
+        "lon": "LONGITUDE",
+        "height": "HEIGHT",
+        "vert_m": "vertical_displacement",
+        "north_m": "northward_displacement",
+        "west_m": "westward_displacement",
+    }
+    df_mose = df_mose.rename(clean_names_mose, axis=1)
+    df_mose = df_mose[list(set(df_mose.columns).intersection(set(clean_names_mose.values())))]
     df_mose.to_parquet(intermediate_dir / "MOSE.pqt")
 
 
@@ -760,22 +785,19 @@ def export_netcdf(output_dir, yml_dict):
     ds["time"] = ("time", df.index, time_attr)
     platform_serial = yml_dict['metadata']['platform_serial']
     if platform_serial == "SB2017":
-        print("adding fake pressure for NBOSI")
+        _log.info("adding fake pressure for NBOSI")
         df['PRES'] = 0
 
     for col_name in list(df):
-        if col_name in clean_names.values():
-            name = col_name
-        elif col_name in clean_names.keys():
-            name = clean_names[col_name]
-        else:
-            continue
         try:
             values = df[col_name].astype(float)
         except:
             values = df[col_name]
+        if col_name not in vocabularies.vocab_attrs.keys():
+            _log.error(f"Did not find attributes for variable {col_name}")
+            continue
 
-        ds[name] = ("time", values, vocabularies.vocab_attrs[name])
+        ds[col_name] = ("time", values, vocabularies.vocab_attrs[col_name])
     if {'PRES', 'TEMP', 'CNDC'}.issubset(list(ds)):
         ds["PSAL"] = ("time",
                       gsw.SP_from_C(ds.CNDC.values, ds.TEMP.values, ds.PRES.values),
@@ -785,12 +807,14 @@ def export_netcdf(output_dir, yml_dict):
     ds = add_sensors(ds, yml_dict['devices'])
     ds.attrs["variables"] = list(ds.variables)
     ds["trajectory"] = xr.DataArray(1, attrs={"cf_role": "trajectory_id"})
-    ds.to_netcdf(output_dir / f"{ds.attrs['id']}.nc")
+    outfile = output_dir / f"{ds.attrs['id']}.nc"
+    ds.to_netcdf(outfile)
+    _log.info(f'Wrote nc out to {outfile}')
     for var_name in ds.variables:
         if var_name in ["trajectory", 'time']:
             continue
         good = len(ds[var_name][~np.isnan(ds[var_name])])
-        print(f"{var_name} {round(100 * good / len(ds[var_name]), 2)} % values")
+        _log.info(f"non nan values for {var_name}: {round(100 * good / len(ds[var_name]), 2)} %")
     ds = ds.sel(time=slice(ds.time.mean(), ds.time.mean() + np.timedelta64(1, 'D')))
     ds.to_netcdf(
         f"/home/callum/Documents/erddap/local_dev/erddap-gold-standard/datasets/{ds.attrs['id']}.nc",
@@ -802,16 +826,6 @@ def merge_intermediate(intermediate_dir, output_dir):
     df_merged = pd.DataFrame()
     for infile in input_files:
         df = pd.read_parquet(infile)
-        for col_name in list(df):
-            if col_name in clean_names.keys():
-                df = df.rename({col_name: clean_names[col_name]}, axis=1)
-        dropped_cols = set(list(df)).difference(set(clean_names.values()))
-        keep_cols = list(set(clean_names.values()).intersection(set(list(df))))
-        if dropped_cols:
-            _log.info(f"From {infile.name} keep: {keep_cols}. Dropping {dropped_cols} ")
-        else:
-            _log.info(f"From {infile.name} keep: {keep_cols}")
-        df = df[keep_cols]
         if df_merged.empty:
             df_merged = df
             continue
@@ -823,7 +837,7 @@ def merge_intermediate(intermediate_dir, output_dir):
         )
         vars_to_merge = [var_name[:-2] for var_name in list(df_merged) if var_name[-2:] == '_x']
         for var_base in vars_to_merge:
-            print(f"merging {var_base}")
+            _log.info(f"merging {var_base}")
             df_merged.loc[np.isnan(df_merged[var_base + '_x'].astype(float)), var_base + '_x'] = df_merged.loc[
                 np.isnan(df_merged[var_base + '_x'].astype(float)), var_base + '_y'].astype(float)
             df_merged = df_merged.rename({var_base + '_x': var_base}, axis=1)

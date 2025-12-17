@@ -566,6 +566,15 @@ sensor_vocabs = {
 }
 
 sailbuoy_sensors_vocabs = {
+    "RBR legato CTD": {
+        "sensor_type": "CTD",
+        "sensor_type_vocabulary": "https://vocab.nerc.ac.uk/collection/L05/current/130/",
+        "sensor_maker": "RBR",
+        "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0049/",
+        "sensor_model": "RBR Legato3 CTD",
+        "sensor_model_vocabulary": "https://vocab.nerc.ac.uk/collection/L22/current/TOOL1745/",
+        "long_name": "RBR Legato3 CTD",
+    },
     "Gill Instruments GMX560": {
         "sensor_type": "meteorological packages",
         "sensor_type_vocabulary": "https://vocab.nerc.ac.uk/collection/L05/current/102/",
