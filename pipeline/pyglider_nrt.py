@@ -41,7 +41,7 @@ def proc_nrt():
         mission = str(mission_paths[-1].parts[-2]).lstrip("0")
         if (platform_serial, int(mission)) in missions_no_proc:
             _log.info(f"Will not process {platform_serial}, M{mission} as it is in missions_no_proc")
-            return
+            continue
         _log.info(f"Checking {platform_serial} M{mission}")
         input_dir = f"/data/data_raw/nrt/{platform_serial}/{mission.zfill(6)}/C-Csv/"
         output_dir = f"/data/data_l0_pyglider/nrt/{platform_serial}/M{mission}/"

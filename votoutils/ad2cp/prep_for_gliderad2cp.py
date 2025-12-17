@@ -20,6 +20,7 @@ nortek_jar_path = secrets["nortek_jar_path"]
 expected_failures = [
     ('SEA066', 45),
     ('SEA068', 45),
+    ('SEA079', 38),
 ]
 
 df = pd.read_csv(
