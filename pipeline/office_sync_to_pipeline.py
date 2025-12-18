@@ -16,9 +16,9 @@ _log = logging.getLogger(__name__)
 def sync_sailbuoy():
     upload_script = sync_script_dir / "upload_sailbuoy.sh"
     sailbuoy_missions = glob.glob("/mnt/samba/*/*/3_Non_Processed/*SB*/SB*M*") + glob.glob("/mnt/samba/*/*/3_Non_Processed/*SB*/SB*M*")
-    print(sailbuoy_missions)
     for input_dir in sailbuoy_missions:
         mission_str = input_dir.split('/')[-1]
+        _log.info(f"upload sailbuoy mission {mission_str}")
         platform_serial, mission = mission_str.split('_M')
         subprocess.check_call(
             [
@@ -51,6 +51,6 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     _log.info("start check of office fileserver for new complete missions")
-    #sync_glider()
+    sync_glider()
     sync_sailbuoy()
     _log.info("complete")
