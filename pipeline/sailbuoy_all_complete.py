@@ -54,7 +54,7 @@ def proc_all_complete(reprocess=True):
         sb = Sailbuoy(
             data_in,
             data_out,
-            f"/home/callum/Documents/data-flow/raw-to-nc/deployment-yaml/sailbuoy_yaml/{platform_serial}_M{mission}.yml"
+            f"/data/deployment-yaml/sailbuoy_yaml/{platform_serial}_M{mission}.yml"
         )
         sb.process()
     _log.info("Finished complete processing")

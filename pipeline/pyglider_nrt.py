@@ -56,6 +56,9 @@ def proc_nrt():
             _log.info(f"no nc file found int {gridfiles_dir}. Reprocessing all data")
             max_time = np.datetime64("1970-01-01")
         in_files = natural_sort(glob.glob(f"{input_dir}*gli*"))
+        if len(in_files) == 0:
+            _log.info(f"no input gli files for {input_dir}. Skipping")
+            continue
         max_dive_file = in_files[-1]
         df = pd.read_csv(
             max_dive_file,
