@@ -7,7 +7,7 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 from votoutils.glider.process_pyglider import proc_pyglider_l0
-from votoutils.utilities.utilities import natural_sort, platforms_no_proc
+from votoutils.utilities.utilities import natural_sort, platforms_no_proc, missions_no_proc
 from votoutils.glider.metocc import create_csv
 
 script_dir = pathlib.Path(__file__).parent.absolute()
@@ -39,6 +39,9 @@ def proc_nrt():
             continue
         mission_paths.sort()
         mission = str(mission_paths[-1].parts[-2]).lstrip("0")
+        if (platform_serial, int(mission)) in missions_no_proc:
+            _log.info(f"Will not process {platform_serial}, M{mission} as it is in missions_no_proc")
+            continue
         _log.info(f"Checking {platform_serial} M{mission}")
         input_dir = f"/data/data_raw/nrt/{platform_serial}/{mission.zfill(6)}/C-Csv/"
         output_dir = f"/data/data_l0_pyglider/nrt/{platform_serial}/M{mission}/"
@@ -52,7 +55,7 @@ def proc_nrt():
         except IndexError:
             _log.info(f"no nc file found int {gridfiles_dir}. Reprocessing all data")
             max_time = np.datetime64("1970-01-01")
-        in_files = natural_sort(glob.glob(f"{input_dir}*pld1*"))
+        in_files = natural_sort(glob.glob(f"{input_dir}*gli*"))
         max_dive_file = in_files[-1]
         df = pd.read_csv(
             max_dive_file,
@@ -62,10 +65,13 @@ def proc_nrt():
             dayfirst=True,
             nrows=10,
         )
-        file_time = df.index.max()
-        if max_time + np.timedelta64(10, "m") > file_time:
-            _log.info(f"No new {platform_serial} M{mission} input files")
-            continue
+        try:
+            file_time = pd.Timestamp(df.index.max())
+            if pd.Timestamp(max_time + np.timedelta64(10, "m")) > file_time:
+                _log.info(f"No new {platform_serial} M{mission} input files")
+                continue
+        except:
+            _log.info(f"failed time check on {max_dive_file}")
         if not pathlib.Path(
             f"/data/deployment_yaml/mission_yaml/{platform_serial}_M{mission}.yml",
         ).exists():

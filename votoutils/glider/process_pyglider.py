@@ -165,9 +165,9 @@ def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
             ds[var] = np.around(ds[var]).astype(int)
         elif var[-3:] == "raw":
             ds[var] = np.around(ds[var])
+    ds = set_profile_numbers(ds)
     ds = post_process(ds)
     ds = set_best_dtype(ds)
-    ds = set_profile_numbers(ds)
     ds = encode_times(ds)
     ds.to_netcdf(outname)
     if kind=='raw':

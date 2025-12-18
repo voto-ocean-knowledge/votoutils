@@ -24,6 +24,7 @@ explained_missions = [('SEA067', 15),
  ('SEA056', 22),
  ('SEA044', 43),
  ('SEA068', 45),
+ ('SEA079', 38),
                       ]
 
 expected_missmatch = (("SEA055", 87),)
@@ -147,7 +148,7 @@ def list_missions(to_skip=()):
                     if skip in str(non_proc):
                         print(f"skipping {skip}")
                         continue
-                proj_glider_dirs = non_proc.glob("S*")
+                proj_glider_dirs =  list(non_proc.glob("SEA*")) + list(non_proc.glob("SHW*"))
                 glider_dirs.append(list(proj_glider_dirs))
 
     glider_dirs = list(chain(*glider_dirs))
