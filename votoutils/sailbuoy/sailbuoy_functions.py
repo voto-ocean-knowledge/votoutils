@@ -815,11 +815,6 @@ def export_netcdf(output_dir, yml_dict):
             continue
         good = len(ds[var_name][~np.isnan(ds[var_name])])
         _log.info(f"non nan values for {var_name}: {round(100 * good / len(ds[var_name]), 2)} %")
-    ds = ds.sel(time=slice(ds.time.mean(), ds.time.mean() + np.timedelta64(1, 'D')))
-    ds.to_netcdf(
-        f"/home/callum/Documents/erddap/local_dev/erddap-gold-standard/datasets/{ds.attrs['id']}.nc",
-    )
-
 
 def merge_intermediate(intermediate_dir, output_dir):
     input_files = intermediate_dir.glob("*.pqt")
