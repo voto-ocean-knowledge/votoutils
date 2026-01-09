@@ -22,6 +22,7 @@ logging.basicConfig(
 def proc_all_complete(reprocess = True):
     _log.info("Start complete reprocessing")
     yml_files = list(pathlib.Path("/data/deployment_yaml/mission_yaml").glob("*.yml"))
+    yml_files.sort()
     glidermissions = []
     for yml_path in yml_files:
         fn = yml_path.name.split(".")[0]
@@ -35,7 +36,7 @@ def proc_all_complete(reprocess = True):
         if (platform_serial, int(mission)) in missions_no_proc:
             _log.info(f"skipping {platform_serial, mission}")
             continue
-        input_dir = f"/data/data_raw/complete_mission/{platform_serial}/{mission}/"
+        input_dir = f"/data/data_raw/complete_mission/{platform_serial}/M{mission}/"
         if not pathlib.Path(input_dir).exists():
             _log.info(
                 f"{platform_serial} M{mission} does not have raw alseamar raw files. skipping",
