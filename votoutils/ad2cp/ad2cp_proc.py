@@ -18,6 +18,27 @@ def adcp_data_present(platform_serial, mission):
     return adcp_file.exists()
 
 
+def getGeoMagStrength(ADCP):
+    lat = np.nanmedian(ADCP.latitude.values)
+    lon = np.nanmedian(ADCP.longitude.values)
+    date = pd.to_datetime(np.nanmedian(ADCP.time.values.astype(float)))
+    year = date.year
+    month = date.month
+    day = date.day
+    url = str('https://geomag.bgs.ac.uk/web_service/GMModels/igrf/14/?'+
+          'latitude='+str(lat)+'&longitude='+str(lon)+
+          '&date='+str(year)+'-'+str(month)+'-'+str(day)+
+          '&resultFormat=xml')
+    import urllib
+    import xml.etree.ElementTree as ET
+    with urllib.request.urlopen(url) as resp:
+        xml_bytes = resp.read()
+    root = ET.fromstring(xml_bytes)
+    total_intensity = float(root.find('field-value/total-intensity').text) * 1e-9 * 10000 * 1000 # To tesla, then to gauss then to millgauss
+    declination = float(root.find('field-value/declination').text)
+    return total_intensity, declination
+
+
 def remove_territorial_waters_adcp(infile_path, gliderfile_path, outfile_path, pressure_margin=30):
     """
     Removing AD2CP data from near the seafloor in territorial waters before uploading it to ERDDAP
@@ -102,36 +123,68 @@ def proc_gliderad2cp(platform_serial, mission, reprocess=False):
     ds_adcp = process_shear.process(str(adcp_file), data_file, options)
 
     data = xr.open_dataset(data_file)
-    dead = data.dead_reckoning
-    # Keep only data points with valid time, lon and lat
-    lon_lat_time = ~np.isnan(data.time) * ~np.isnan(data.longitude) * ~np.isnan(data.latitude)
-    dead = dead[lon_lat_time]
-    sample_step = ((dead.time.max() - dead.time.min()) / len(dead)) / np.timedelta64(1, 's')
-    target_step = 10  # target one sample every 10 seconds for the calculation of DAC. Coarsening speeds this up *a lot*
-    subsample = max(1, int(target_step / sample_step))
-    print(
-        f"subsampling dead reckoning data by a factor of {subsample} to match target sampling rate of {target_step} seconds during DAC caclulation")
-    dead = dead[::subsample]
+    # Correct magnetic declination
+    df_glider = data['heading'].to_pandas()
+    df_adcp = ds_adcp['Heading'].to_pandas()
+    intentisy, declination = getGeoMagStrength(data)
+    df_comp = pd.merge_asof(df_glider, df_adcp, left_index=True, right_index=True,
+                            tolerance=pd.Timedelta("1s")).dropna().rename(
+        {'heading': 'heading_glider', 'Heading': 'heading_ad2cp'}, axis=1)
+    df_comp['heading_ad2cp_corr'] = df_comp.heading_ad2cp + declination
 
-    # dead reckoning 0 when lon/lat are from GPS fix. 1 when interpolated. Use the gradient of this to find
-    # where the glider starts & ends surface GPS fixes
-    dead_reckoning_post_change = dead[1:][dead.diff(dim='time') != 0]
-    post_dive = dead_reckoning_post_change[dead_reckoning_post_change == 0]
+    df_comp['difference'] = df_comp.heading_glider - df_comp.heading_ad2cp
+    df_comp['difference_corr'] = df_comp.heading_glider - df_comp.heading_ad2cp_corr
 
-    dead_reckoning_pre_change = dead[:-1][dead.diff(dim='time', label='lower') != 0]
-    pre_dive = dead_reckoning_pre_change[dead_reckoning_pre_change == 0]
+    for var_name in ['difference', 'difference_corr']:
+        df_comp[var_name][df_comp[var_name] > 180] = df_comp[var_name][df_comp[var_name] > 180] - 360
+        df_comp[var_name][df_comp[var_name] < -180] = df_comp[var_name][df_comp[var_name] < -180] + 360
+    if abs(np.nanmedian(df_comp.difference_corr)) < 2 and abs(np.nanmedian(df_comp.difference)) > 4:
+        _log.warning(
+            f"will correct adcp data for heading error from {abs(np.nanmedian(df_comp.difference))} to {abs(np.nanmedian(df_comp.difference_corr))} using declination {declination}")
+        ds_adcp.Heading.values += declination
+    else:
+        _log.warning(
+            f"Heading error {abs(np.nanmedian(df_comp.difference))} too small to correct using declination {declination}")
 
-    # Cut out any predives after the last postdives and postdives before the first predive
-    pre_dive = pre_dive[pre_dive.time < post_dive.time.max()]
-    post_dive = post_dive[post_dive.time > pre_dive.time.min()]
+    # Calculate DAC
+    data = data.to_pandas()
+    data['time'] = data.index
+    lon_lat_time = ~np.isnan(data.index) * ~np.isnan(data.longitude) * ~np.isnan(data.latitude)
+    data = data[lon_lat_time]
+    gps_predive = []
+    gps_postdive = []
 
-    gps_predive = np.array([[time, lat, lon] for time, lat, lon in
-                            zip(pre_dive.time.values, pre_dive.latitude.values, pre_dive.longitude.values)])
-    gps_postdive = np.array([[time, lat, lon] for time, lat, lon in
-                             zip(post_dive.time.values, post_dive.latitude.values, post_dive.longitude.values)])
-    dive_time_hours = (post_dive.time.values - pre_dive.time.values) / np.timedelta64(1, 'h')
-    assert (dive_time_hours > 0).all
-    assert 24 > np.mean(dive_time_hours) > 0.5
+    dives = np.round(np.unique(data.dive_num))
+
+    _idx = np.arange(len(data.dead_reckoning.values))
+    dr  = np.sign(np.gradient(data.dead_reckoning.values))
+
+    for dn in dives:
+        _gd = data.dive_num.values == dn
+        if all(np.unique(dr[_gd]) == 0):
+            continue
+
+        _post = -dr.copy()
+        _post[_post != 1] = np.nan
+        _post[~_gd] = np.nan
+
+        _pre = dr.copy()
+        _pre[_pre != 1] = np.nan
+        _pre[~_gd] = np.nan
+
+        if any(np.isfinite(_post)):
+            # The last -1 value is when deadreckoning is set to 0, ie. GPS fix. This is post-dive.
+            last  = int(np.nanmax(_idx * _post))
+            gps_postdive.append(np.array([data.time[last], data.longitude[last], data.latitude[last]]))
+
+        if any(np.isfinite(_pre)):
+            # The first +1 value is when deadreckoning is set to 1, the index before that is the last GPS fix. This is pre-dive.
+            first = int(np.nanmin(_idx * _pre))-1 # Note the -1 here.
+            gps_predive.append(np.array([data.time[first], data.longitude[first], data.latitude[first]]))
+
+    gps_predive = np.vstack(gps_predive)
+    gps_postdive = np.vstack(gps_postdive)
+
     currents, DAC = process_currents.process(
         ds_adcp, gps_predive, gps_postdive, options
     )
