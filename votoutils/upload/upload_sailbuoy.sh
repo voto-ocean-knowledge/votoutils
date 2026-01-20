@@ -9,5 +9,5 @@ echo make directory on target if it does not already exist
 ssh pipeline@88.99.244.110 mkdir -p $tgtdir
 echo ""
 echo rsync data
-rsync -ruv --stats $filesdir/* "pipeline@88.99.244.110:$tgtdir"
+rsync -ruv --stats --exclude WBT "$filesdir"/* "pipeline@88.99.244.110:$tgtdir"
 echo Finished

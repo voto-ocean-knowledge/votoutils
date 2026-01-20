@@ -15,7 +15,7 @@ _log = logging.getLogger(__name__)
 
 def sync_sailbuoy():
     upload_script = sync_script_dir / "upload_sailbuoy.sh"
-    sailbuoy_missions = glob.glob("/mnt/samba/*/*/3_Non_Processed/*SB*/SB*M*") + glob.glob("/mnt/samba/*/*/3_Non_Processed/*SB*/SB*M*")
+    sailbuoy_missions = glob.glob("/mnt/samba/*/3_Non_Processed/*SB*/SB*M*") + glob.glob("/mnt/samba/*/*/3_Non_Processed/*SB*/SB*M*")
     for input_dir in sailbuoy_missions:
         mission_str = input_dir.split('/')[-1]
         _log.info(f"upload sailbuoy mission {mission_str}")
