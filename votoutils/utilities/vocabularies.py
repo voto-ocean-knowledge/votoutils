@@ -629,6 +629,15 @@ sailbuoy_sensors_vocabs = {
         "sensor_model_vocabulary": "https://vocab.nerc.ac.uk/collection/L22/current/TOOL0626/",
         "long_name": "Aanderaa conductivity sensor 4319A",
     },
+    "Aanderaa DCPS": {
+        "sensor_type": "current profilers",
+        "sensor_type_vocabulary": "http://vocab.nerc.ac.uk/collection/L05/current/115/",
+        "sensor_maker": "Aanderaa",
+        "sensor_maker_vocabulary": "https://vocab.nerc.ac.uk/collection/L35/current/MAN0007/",
+        "sensor_model": "Aanderaa Doppler Current Profiler Sensor (DCPS) series",
+        "sensor_model_vocabulary": "http://vocab.nerc.ac.uk/collection/L22/current/TOOL2250/",
+        "long_name": "Nortek AD2CP",
+    },
 
 }
 
