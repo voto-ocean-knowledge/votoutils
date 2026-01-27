@@ -60,15 +60,15 @@ def proc_nrt():
             _log.info(f"no input gli files for {input_dir}. Skipping")
             continue
         max_dive_file = in_files[-1]
-        df = pd.read_csv(
-            max_dive_file,
-            sep=";",
-            parse_dates=True,
-            index_col=0,
-            dayfirst=True,
-            nrows=10,
-        )
         try:
+            df = pd.read_csv(
+                max_dive_file,
+                sep=";",
+                parse_dates=True,
+                index_col=0,
+                dayfirst=True,
+                nrows=10,
+            )
             file_time = pd.Timestamp(df.index.max())
             if pd.Timestamp(max_time + np.timedelta64(10, "m")) > file_time:
                 _log.info(f"No new {platform_serial} M{mission} input files")
