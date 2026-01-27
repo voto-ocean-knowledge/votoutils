@@ -1,4 +1,3 @@
-import yaml
 import numpy as np
 import polars as pl
 import xarray as xr

@@ -60,6 +60,7 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind):
     # temporarily convert some variable names for pyglider compatibility
     with open(original_deploymentyaml) as fin:
         deployment = yaml.safe_load(fin)
+    deployment_original = deployment.copy()
 
     new_var_dict = {}
     for var_name in deployment['netcdf_variables']:
@@ -113,8 +114,8 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind):
             )
 
     ds = ds.set_coords(['TIME', 'LONGITUDE', 'LATITUDE', 'DEPTH'])
-    
-    
+    ds.TIME.encoding['calendar'] = deployment_original['netcdf_variables']['TIME']['calendar']
+
     # OG1 GPS variables and phase
     
     for vname in ["LATITUDE", "LONGITUDE", "TIME"]:
@@ -156,6 +157,7 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind):
     ds["DEPLOYMENT_TIME"] = xr.DataArray(np.nanmin(ds.TIME.values), attrs = {
         "long_name": "date of deployment",
         "standard_name": "time",})
+    ds.DEPLOYMENT_TIME.encoding['calendar'] = deployment_original['netcdf_variables']['TIME']['calendar']
 
     ds["DEPLOYMENT_LATITUDE"] = xr.DataArray(ds.LATITUDE.values[~np.isnan(ds.LATITUDE)][0],
                                               attrs = {"long_name": "latitude of deployment"})
@@ -181,6 +183,7 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind):
     ds.attrs["start_date"] = ts
     ds.attrs["id"] = f"sea{str(ds.attrs['glider_serial']).zfill(3)}_{ts}_{postscript}"
     ds.attrs["date_created"] = dt_created
+    ds.attrs['Conventions'] = deployment_original['metadata']['Conventions']
     ds.to_netcdf(outname)
     return outname
 
