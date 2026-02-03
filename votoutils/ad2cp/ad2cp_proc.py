@@ -190,6 +190,16 @@ def proc_gliderad2cp(platform_serial, mission, reprocess=False):
     )
     currents = process_bias.process(currents, options)
     currents.to_netcdf(outfile)
+    subprocess.check_call(
+        [
+            "/usr/bin/bash",
+            str(sync_script_dir / "upload_processed_adcp_erddap.sh"),
+            str(platform_serial),
+            str(mission),
+            str(outfile),
+        ],
+    )
+    print(f"sent {adcp_fn} processed adcp file to ERDDAP")
 
 
 def proc_all_ad2cp():
