@@ -9,7 +9,7 @@ from votoutils.utilities.geocode import get_seas_merged_nav_nc
 
 
 def set_profile_numbers(ds):
-    ds["dive_num"] = np.around(ds["dive_num"]).astype(int)
+    ds["DIVE_NUM"] = np.around(ds["DIVE_NUM"]).astype(int)
     df = ds.to_pandas()
     df["profile_index"] = 1
     deepest_points = []

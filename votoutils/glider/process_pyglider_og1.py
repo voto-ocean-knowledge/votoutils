@@ -33,6 +33,10 @@ def convert_seaexplorer_phase(ds):
     )
     return ds
 
+def drop_derived_variables(ds):
+    drop_vars = {'density', 'potential_density', 'potential_temperature', 'salinity'}.intersection(set(ds.data_vars))
+    ds = ds.drop_vars(drop_vars)
+    return ds
 
 def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind):
     og_date_format = "%Y%m%dT%H%M"
@@ -42,7 +46,8 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind):
                               'LATITUDE': 'latitude',
                               'LONGITUDE': 'longitude',
                               'TIME': 'time',
-                              'DEPTH': 'depth'}
+                              'DEPTH': 'depth'
+                              }
 
     if kind not in ["raw", "sub"]:
         raise ValueError("kind must be raw or sub")
@@ -98,6 +103,7 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind):
     ds = xr.open_dataset(outname)
 
     # OG1 rename variables back to OG1 names
+    ds = drop_derived_variables(ds)
     for og1_var, pyglider_var in  og1_pyglider_var_names.items():
         if pyglider_var in ds.variables:
             ds[og1_var] = ds[pyglider_var].copy()
