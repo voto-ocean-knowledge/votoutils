@@ -177,16 +177,24 @@ def adcp_dataset_check(df):
     adcp = pd.read_csv(
         "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/ad2cp.csvp"
     )
+    adcp_proc = pd.read_csv(
+        "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/gliderad2cp_files.csvp"
+    )
     meta_with_adcp = meta[meta["available_variables"].str.contains("ad2cp_pressure")]
-    delayed_missions = df.index[df.index.str[:11] == "delayed_SEA"].str[8:].values
+    delayed_missions = df.index[df.index.str[:9] == "delayed_S"].str[8:].values
     missions_with_adcp = meta_with_adcp["datasetID"].str[4:].values
     expected_adcp_missions = set(delayed_missions).intersection(missions_with_adcp)
     adcp_files = set(adcp.name.str.split(".", expand=True)[0].values)
+    proc_adcp_files =  set(adcp_proc.name.str.split(".", expand=True)[0].str.split('_adcp_', expand=True)[0].values)
     missing_adcp = expected_adcp_missions.difference(adcp_files)
+    missing_proc_adcp = expected_adcp_missions.difference(proc_adcp_files)
     expected_missing_adcp = ["SEA066_M16"]
     bad_missing_adcp = missing_adcp.difference(expected_missing_adcp)
     if len(bad_missing_adcp) > 0:
         mailer("cherddap", f"missing expected adcp files {bad_missing_adcp}")
+    bad_missing_proc_adcp = missing_proc_adcp.difference(expected_missing_adcp)
+    if len(bad_missing_adcp) > 0:
+        mailer("cherddap", f"missing expected processed adcp files {bad_missing_proc_adcp}")
 
 
 def international_waters_check(e, dataset_id):
