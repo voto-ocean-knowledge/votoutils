@@ -52,7 +52,7 @@ def get_configs():
         "salinity": {
             "conductivity": {
                 "qartod": {
-                    "gross_range_test": {"suspect_span": [5, 42], "fail_span": [2, 45]},
+                    "gross_range_test": {"suspect_span": [5, 45], "fail_span": [2, 50]},
                 },
             },
             "salinity": {
@@ -65,7 +65,7 @@ def get_configs():
         "conductivity": {
             "conductivity": {
                 "qartod": {
-                    "gross_range_test": {"suspect_span": [5, 42], "fail_span": [2, 45]},
+                    "gross_range_test": {"suspect_span": [5, 45], "fail_span": [2, 50]},
                 },
             },
         },

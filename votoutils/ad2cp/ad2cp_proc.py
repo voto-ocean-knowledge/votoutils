@@ -46,7 +46,8 @@ def remove_territorial_waters_adcp(infile_path, gliderfile_path, outfile_path, p
     :return:
     """
     ADCP = xr.open_dataset(infile_path, group='Data/Average')
-    ADCP = ADCP.drop_vars(["MatlabTimeStamp"])
+    if 'MatlabTimeStamp' in list(ADCP):
+        ADCP = ADCP.drop_vars(["MatlabTimeStamp"])
     config = xr.open_dataset(infile_path, group='Config')
     glider_data = xr.open_dataset(gliderfile_path)
     df_glider = pd.DataFrame(

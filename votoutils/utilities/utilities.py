@@ -53,13 +53,18 @@ def match_input_files(gli_infiles, pld_infiles):
 
 
 def encode_times(ds):
-    if "units" in ds.time.attrs.keys():
-        ds.time.attrs.pop("units")
-    if "calendar" in ds.time.attrs.keys():
-        ds.time.attrs.pop("calendar")
-    ds["time"].encoding["units"] = "seconds since 1970-01-01T00:00:00Z"
+    if 'time' in list(ds):
+        time_unit = 'time'
+    else:
+        time_unit = 'TIME'
+    if "units" in ds[time_unit].attrs.keys():
+        ds[time_unit].attrs.pop("units")
+    if "calendar" in ds[time_unit].attrs.keys():
+        ds[time_unit].attrs.pop("calendar")
+
+    ds[time_unit].encoding["units"] = "seconds since 1970-01-01T00:00:00Z"
     for var_name in list(ds):
-        if "time" in var_name.lower() and not var_name == "time":
+        if "time" in var_name.lower() and not var_name == [time_unit]:
             for drop_attr in ["units", "calendar", "dtype"]:
                 if drop_attr in ds[var_name].attrs.keys():
                     ds[var_name].attrs.pop(drop_attr)
@@ -159,6 +164,7 @@ def sensor_sampling_period(glider, mission):
 def mailer(subject, message, recipient="callum.rollo@voiceoftheocean.org"):
     if "callum" in str(sync_script_dir):
         _log.error(f"Mock mail {subject}: {message} to {recipient}")
+        print(message)
         return
     _log.warning(f"email: {subject}, {message}, {recipient}")
     subject = subject.replace(" ", "-")
@@ -223,4 +229,6 @@ missions_no_proc = [
                     ("SEA057", 51),
                     ("SEA057", 75),
                     ("SEA070", 29),
+                    ("SEA056", 22),
+                    ("SEA055", 81),
                     ]

@@ -25,6 +25,7 @@ explained_missions = [('SEA067', 15),
  ('SEA044', 43),
  ('SEA068', 45),
  ('SEA079', 38),
+ ('SEA078', 43),
                       ]
 
 expected_missmatch = (("SEA055", 87),)
@@ -38,6 +39,7 @@ skip_projects = [
     "8_KAMI-KZ_001",
     "11_Amundsen_Sea",
     "40_OMG_Training",
+    "46__Arkona_Temp",
     "temprary_data_store",
 ]
 
@@ -90,11 +92,13 @@ def good_mission(
         return
     nav_path = mission_path / "NAV"
     if not nav_path.is_dir():
+        nav_path = mission_path / "NAV_raw"
+    if not nav_path.is_dir():
         msg = f"no nav, {pretty_mission}"
         mailer("mission not processed", msg)
         return
     pld_files = list(pld_path.glob(f"{platform_serial.lower()}.{mission}.pld1.raw*"))
-    nav_files = list(nav_path.glob(f"{platform_serial.lower()}.{mission}.gli.sub*"))
+    nav_files = list(nav_path.glob(f"{platform_serial.lower()}.{mission}.gli.*"))
     if len(pld_files) == 0 or len(nav_files) == 0:
         msg = f"No matching files {pretty_mission} "
         mailer("mission not processed", msg)
