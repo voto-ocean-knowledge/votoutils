@@ -1,5 +1,6 @@
 import polars as pl
 import numpy as np
+import pandas as pd
 import datetime
 import logging
 import glob
@@ -48,13 +49,22 @@ def clean_2019(infile):
         _log.warning(f"{infile} has no min time. Deleting")
         filepath.unlink()
         return
+    dfa = pd.read_csv(filepath, names=['rawstring'])
+    sep_count = dfa['rawstring'].str.count(';').values
+    if sep_count[-1] < np.nanmedian(sep_count):
+        _log.warning(f"{infile} final line is incomplete. removing")
+        with open(infile) as fin:
+            lines = fin.readlines()
+        with open(infile, 'w') as fout:
+            fout.writelines(lines[:-1])
     if df["time"].min() > datetime.datetime(2020, 1, 1):
-        return
+        return True
     years = np.array(df["time"].dt.year().to_list())
-    if len(years[years < 2020]) / len(years) < 0.8:
+    if len(years[years < 2020]) / len(years) > 0.8:
+        _log.warning(f"{infile} has > 80 % invalid dates. Deleting")
+        filepath.unlink()
         return
-    _log.warning(f"{infile} has > 80 % invalid dates. Deleting")
-    filepath.unlink()
+    return True
 
 
 def clean_infiles(in_dir):
