@@ -5,14 +5,17 @@ import xarray as xr
 import datetime
 import logging
 from pathlib import Path
-import re
 from pyglider import seaexplorer
+from votoutils.utilities.utilities import encode_times_og1
+from votoutils.glider.pre_process import clean_infiles
+from votoutils.glider.process_pyglider import safe_delete
+_log = logging.getLogger(__name__)
 
 
 def convert_seaexplorer_phase(ds):
-    if "NAV_STATE" not in ds.variables:
+    if "NAV_RESOURCE" not in ds.variables:
         return ds
-    seaex_phase = ds["NAV_STATE"].values
+    seaex_phase = ds["NAV_RESOURCE"].values
     standard_phase = np.zeros(len(seaex_phase)).astype(int)
     standard_phase[seaex_phase == 115] = 3
     standard_phase[seaex_phase == 116] = 3
@@ -27,18 +30,19 @@ def convert_seaexplorer_phase(ds):
         standard_phase,
         coords=ds["LATITUDE"].coords,
         attrs={
-            "long_name": "behavior of the glider at sea",
+            "long_name": "Identifier of glider phase",
+            "vocabulary": "http://vocab.nerc.ac.uk/collection/OG1/current/PHASE/",
             "phase_vocabulary": "https://github.com/OceanGlidersCommunity/OG-format-user-manual/blob/main/vocabularyCollection/phase.md",
         },
     )
     return ds
 
 def drop_derived_variables(ds):
-    drop_vars = {'density', 'potential_density', 'potential_temperature', 'salinity'}.intersection(set(ds.data_vars))
+    drop_vars = {'density', 'potential_density', 'potential_temperature', 'salinity', 'distance_over_ground'}.intersection(set(ds.data_vars))
     ds = ds.drop_vars(drop_vars)
     return ds
 
-def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind):
+def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind, reprocess=False):
     og_date_format = "%Y%m%dT%H%M"
     og1_pyglider_var_names = {'CNDC': 'conductivity',
                               'TEMP': 'temperature',
@@ -52,15 +56,22 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind):
     if kind not in ["raw", "sub"]:
         raise ValueError("kind must be raw or sub")
     rawdir = str(Path(input_dir)) + "/"
+    if not Path(input_dir).exists():
+        print(f"No input found in {input_dir}")
+        return None
     output_path = Path(output_dir)
     if not output_path.exists():
         output_path.mkdir(parents=True)
     rawncdir = output_dir + "rawnc/"
     l0tsdir = output_dir + "timeseries/"
     original_deploymentyaml = yaml_file
-    seaexplorer.raw_to_rawnc(rawdir, rawncdir, original_deploymentyaml)
-    # merge individual netcdf files into single netcdf files *.gli*.nc and *.pld1*.nc
-    seaexplorer.merge_parquet(rawncdir, rawncdir, original_deploymentyaml, kind=kind)
+    if not reprocess and Path(l0tsdir).exists():
+        _log.info(f"Will not reprocess {input_dir}")
+        return
+    if reprocess:
+        safe_delete([l0tsdir, rawncdir])
+    safe_delete([l0tsdir])
+    clean_infiles(input_dir)
 
     # temporarily convert some variable names for pyglider compatibility
     with open(original_deploymentyaml) as fin:
@@ -74,22 +85,32 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind):
         else:
             new_var_dict[var_name] = deployment['netcdf_variables'][var_name]
     deployment['netcdf_variables'] = new_var_dict
+
+    deploymentyaml = str(Path(original_deploymentyaml).parent / Path(original_deploymentyaml).name.replace('.', '_pyglider_mod.'))
+
+    with open(deploymentyaml, "w") as fin:
+        yaml.dump(deployment, fin)
+
+    seaexplorer.raw_to_rawnc(rawdir, rawncdir, deploymentyaml)
+    # merge individual netcdf files into single netcdf files *.gli*.nc and *.pld1*.nc
+    seaexplorer.merge_parquet(rawncdir, rawncdir, deploymentyaml, kind=kind)
+
     # OG1 add some metadata attributes for OG1-pyglider compatability
     postscript = 'R'
     if kind == 'raw':
         postscript = "delayed"
+
     nav_file = list(Path(rawncdir).glob('*rawgli*'))[0]
     nav_df = pl.read_parquet(nav_file)
     start_datetime = nav_df['time'].nan_min()
     ts = start_datetime.strftime(og_date_format)
     glider_serial = deployment["metadata"]["platform_serial_number"]
     deployment['metadata']["glider_serial"] = glider_serial
-    glider_number = re.findall(r"\d+", glider_serial)[0]
-    deployment['metadata']["deployment_name"] = f"sea{str(glider_number).zfill(3)}_{ts}_{postscript}"
-    deploymentyaml = str(Path(original_deploymentyaml).parent / Path(original_deploymentyaml).name.replace('.', '_pyglider_mod.'))
+    deployment['metadata']["deployment_name"] = f"{glider_serial.lower()}_{ts}_{postscript}"
 
     with open(deploymentyaml, "w") as fin:
         yaml.dump(deployment, fin)
+
 
     # Make level-0 timeseries netcdf file from the raw files
     outname = seaexplorer.raw_to_L0timeseries(
@@ -120,6 +141,7 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind):
             )
 
     ds = ds.set_coords(['TIME', 'LONGITUDE', 'LATITUDE', 'DEPTH'])
+    ds.TIME.values = ds.TIME.values.astype('datetime64[s]') # ERDDAP cannot take nanoseconds
     ds.TIME.encoding['calendar'] = deployment_original['netcdf_variables']['TIME']['calendar']
 
     # OG1 GPS variables and phase
@@ -129,13 +151,14 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind):
         null_val = np.nan
         if 'TIME' in vname:
             null_val = np.datetime64("NaT")
-        ds[f"{vname}_GPS"].values[ds["NAV_STATE"].values != 119] = null_val
+        non_surface_mask = ~np.logical_or(ds["NAV_RESOURCE"].values == 116, ds["NAV_RESOURCE"].values == 119)
+        ds[f"{vname}_GPS"].values[non_surface_mask] = null_val
         ds[f"{vname}_GPS"].attrs["long_name"] = f"{vname.lower()} of each GPS location"
     ds["LATITUDE_GPS"].attrs["vocabulary"] = (
-        "https://vocab.nerc.ac.uk/collection/OG1/current/LAT_GPS/"
+        "http://vocab.nerc.ac.uk/collection/OG1/current/LAT_GPS/"
     )
     ds["LONGITUDE_GPS"].attrs["vocabulary"] = (
-        "https://vocab.nerc.ac.uk/collection/OG1/current/LON_GPS/"
+        "http://vocab.nerc.ac.uk/collection/OG1/current/LON_GPS/"
     )
     ds = convert_seaexplorer_phase(ds)
 
@@ -205,4 +228,7 @@ if __name__ == "__main__":
     )
     glider = "SEA045"
     mission = 79
-    proc_pyglider_og1(f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv", f"/data/data_l0_pyglider/OG_nrt/{glider}/M{mission}/", f"/data/deployment_yaml/mission_yaml/OG_{glider}_M{str(mission)}.yml", 'sub')
+    nc_out = proc_pyglider_og1(f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
+                               f"/data/data_l0_pyglider/OG_nrt/{glider}/M{mission}/",
+                               f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
+                               'sub')

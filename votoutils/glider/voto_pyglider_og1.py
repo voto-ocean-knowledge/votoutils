@@ -6,16 +6,17 @@ from pathlib import Path
 
 from votoutils.glider.process_pyglider_og1 import proc_pyglider_og1
 from votoutils.utilities.geocode import get_seas_merged_nav_nc
+from votoutils.utilities.utilities import encode_times, encode_times_og1
 
 
 def set_profile_numbers(ds):
-    ds["DIVE_NUM"] = np.around(ds["DIVE_NUM"]).astype(int)
+    ds["DIVE_NUMBER"] = np.around(ds["DIVE_NUMBER"]).astype(int)
     df = ds.to_pandas()
     df["profile_index"] = 1
     deepest_points = []
-    dive_nums = np.unique(df.dive_num)
+    dive_nums = np.unique(df.DIVE_NUMBER)
     for num in dive_nums:
-        df_dive = df[df.dive_num == num]
+        df_dive = df[df.DIVE_NUMBER == num]
         if np.isnan(df_dive.PRES).all():
             deep_inflect = df_dive.index[int(len(df_dive) / 2)]
         else:
@@ -43,21 +44,20 @@ def set_profile_numbers(ds):
 
     df["profile_direction"] = 1
     df.loc[df.profile_index % 2 == 0, "profile_direction"] = -1
-    ds["profile_index"] = df.dive_num.copy()
-    ds["profile_direction"] = df.dive_num.copy()
-    ds["profile_index"].values = df.profile_index
-    ds["profile_direction"].values = df.profile_direction
-    ds["profile_index"].attrs = dict(long_name="profile index", units="1", sources="PRES, time, dive_num")
-    ds["profile_direction"].attrs = {"long_name": "profile direction", "units": "1",
-                                     "sources": "PRES, time, dive_num", "comment": "-1 = ascending, 1 = descending"}
-    ds["profile_num"] = ds["profile_index"].copy()
-    ds["profile_num"].attrs["long_name"] = "profile number"
+    ds["PROFILE_NUMBER"] = df.DIVE_NUMBER.copy()
+    ds["PROFILE_DIRECTION"] = df.DIVE_NUMBER.copy()
+    ds["PROFILE_NUMBER"].values = df.profile_index
+    ds["PROFILE_DIRECTION"].values = df.profile_direction
+    ds["PROFILE_NUMBER"].attrs = dict(long_name="profile number", units="1", sources="PRES, TIME, DIVE_NUMBER")
+    ds["PROFILE_DIRECTION"].attrs = {"long_name": "profile direction", "units": "1",
+                                     "sources": "PRES, TIME, DIVE_NUMBER", "comment": "-1 = ascending, 1 = descending"}
     return ds
 
 
 def add_voto_stuff(outname):
     out_path = Path(outname)
-    ds = xr.open_dataset(outname)
+    coder = xr.coders.CFDatetimeCoder(time_unit="s")
+    ds = xr.open_dataset(outname, decode_times=coder)
     attrs = ds.attrs
     # OG1 VOTO specific
     timeseries_dir = out_path.parent
@@ -82,11 +82,15 @@ def add_voto_stuff(outname):
     attrs["variables"] = list(ds.variables)
     attrs["glider_serial"] = glider_serial
     ds.attrs = attrs
-    outname_voto = str(outname).replace('.nc', '_VOTO.nc')
-    ds.to_netcdf(outname_voto)
+    outname_voto = f"{dataset_id}.nc"
+    outpath_voto = out_path.parent / outname_voto
+    drop_vars = {'profile_index', 'profile_direction'}.intersection(set(ds.data_vars))
+    ds = ds.drop_vars(drop_vars)
+    ds = encode_times(ds)
+    ds.to_netcdf(outpath_voto)
 
 
-if __name__ == "__main__":
+def proc_one():
     logf = "/data/log/pyglider_og1.log"
     logging.basicConfig(
         filename=logf,
@@ -95,9 +99,53 @@ if __name__ == "__main__":
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    glider = "SEA045"
-    mission = 79
-    nc_out = proc_pyglider_og1(f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
-                      f"/data/data_l0_pyglider/OG_nrt/{glider}/M{mission}/",
-                      f"/data/deployment_yaml/mission_yaml/OG_{glider}_M{str(mission)}.yml", 'sub')
+    glider="SEA045"
+    mission = 37
+    kind='nrt'
+    if kind =='raw':
+        nc_out = proc_pyglider_og1(f"/data/data_raw/complete_mission/{glider}/M{mission}/",
+                                   f"/data/data_l0_pyglider/OG_complete_mission/{glider}/M{mission}/",
+                                   f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
+                                   'raw', reprocess=True)
+    else:
+
+        nc_out = proc_pyglider_og1(f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
+                                   f"/data/data_l0_pyglider/OG_nrt/{glider}/M{mission}/",
+                                   #f"/data/deployment_yaml/mission_yaml/OG_{glider}_M{str(mission)}.yml",
+                                   f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
+                                   'sub', reprocess=True)
+    if not nc_out:
+        return
     add_voto_stuff(nc_out)
+
+def proc_all_nrt():
+    logf = "/data/log/pyglider_og1.log"
+    logging.basicConfig(
+        filename=logf,
+        filemode="a",
+        format="%(asctime)s %(levelname)-8s %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    all_yamls = list(Path("/data/deployment_yaml/og1").glob("*.yaml"))
+    mission_yamls = [yml for yml in all_yamls if "pyglider_mod" not in str(yml)]
+    mission_yamls.sort()
+
+    for yml_file in mission_yamls:
+        fn = yml_file.name
+        print(fn)
+        glider, mission = fn.split(".")[0].split('_M')
+        nc_out = proc_pyglider_og1(f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
+                                   f"/data/data_l0_pyglider/OG_nrt/{glider}/M{mission}/",
+                                   f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
+                                   'sub')
+        if not nc_out:
+            continue
+        add_voto_stuff(nc_out)
+        print(nc_out)
+
+
+if __name__ == "__main__":
+    #proc_one()
+    #add_voto_stuff("/data/data_l0_pyglider/OG_nrt/SEA069/M48/timeseries/mission_timeseries_VOTO.nc")
+    proc_all_nrt()
