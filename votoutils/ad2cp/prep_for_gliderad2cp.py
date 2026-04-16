@@ -1,10 +1,11 @@
-from votoutils.monitor.office_check_glider_files import list_missions, skip_projects
+from votoutils.monitor.office_check_glider_files import list_missions, skip_projects, explained_missions
 import shutil
 import subprocess
 from pathlib import Path
 import logging
 import tempfile
 import json
+import xarray as xr
 import pandas as pd
 from votoutils.upload.sync_functions import sync_script_dir
 from votoutils.utilities.utilities import mailer
@@ -37,31 +38,41 @@ def convert_from_ad2cp(dir_in, outfile, reprocess=False):
         return
     elif len(ad2cp_files) > 1:
         _log.error(f"multiple input ad2cp files in {dir_in}")
-        mailer("Multuiple ad2cp", f"multiple input ad2cp files in {dir_in}")
-        return
-    infile = ad2cp_files[0]
-    fn = infile.name
+        mailer("Multiple ad2cp", f"multiple input ad2cp files in {dir_in}")
     if outfile.exists() and not reprocess:
         _log.debug(f"outfile {outfile} already exists. Not reprocessing")
         return
-    _log.debug(f"Converting {infile}")
-
     with tempfile.TemporaryDirectory() as tmpdirname:
         _log.debug(f"created temporary directory {tmpdirname}")
-        tmp_ad2cp = f"{tmpdirname}/{fn}"
-        shutil.copy(infile, tmp_ad2cp)
+        for infile in ad2cp_files:
+            fn = infile.name
+            _log.debug(f"Converting {infile}")
+            tmp_ad2cp = f"{tmpdirname}/{fn}"
+            shutil.copy(infile, tmp_ad2cp)
 
-        subprocess.check_call(
-            [
-                "/usr/bin/bash",
-                str(script_dir / "convert_from_nortek.sh"),
-                str(nortek_jar_path),
-                str(tmpdirname),
-                str(fn),
-            ],
-        )
-        tmp_nc = list(Path(tmpdirname).glob("*.nc"))[0]
-        shutil.copy(tmp_nc, outfile)
+            subprocess.check_call(
+                [
+                    "/usr/bin/bash",
+                    str(script_dir / "convert_from_nortek.sh"),
+                    str(nortek_jar_path),
+                    str(tmpdirname),
+                    str(fn),
+                ],
+            )
+            tmp_nc = list(Path(tmpdirname).glob("*.nc"))
+        if len(tmp_nc) == 1:
+            shutil.copy(tmp_nc[0], outfile)
+        else:
+            _log.info(f"adcp file has been broken up by NortekExport. Reconstructing {outfile}")
+            ADCP = xr.open_mfdataset(f"{tmpdirname}/*.nc", group="Data/Average")
+            if "MatlabTimeStamp" in list(ADCP):
+                ADCP = ADCP.drop_vars(["MatlabTimeStamp"])
+            combi_file = f"{tmpdirname}/combi.nc"
+            config = xr.open_dataset(tmp_nc[0], group='Config')
+            ADCP.to_netcdf(combi_file, "w", group="Data/Average", format="NETCDF4")
+            config.to_netcdf(combi_file, "a", group="Config", format="NETCDF4")
+            shutil.copy(combi_file, outfile)
+
     _log.info(f"Converted {outfile}")
 
 
@@ -80,6 +91,7 @@ def convert_ad2cp_to_nc(
     dir_parts = list(mission_dir.parts)
     dir_parts[-3] = "3_Non_Processed"
     source_dir = Path(*dir_parts) / "ADCP"
+    dir_parts[-3] = "2_Raw"
     dir_parts[-3] = "4_Processed"
     destination_dir = Path(*dir_parts) / "ADCP_auto"
     glider_str, mission_str = dir_parts[-1].split("_")
@@ -87,12 +99,14 @@ def convert_ad2cp_to_nc(
     mission = int(mission_str[1:])
     if (platform_serial, mission) in expected_failures:
         return
-    destination_file = destination_dir / f"{platform_serial}_M{mission}.ad2cp"
     nc_out_fn = f"{platform_serial}_M{mission}.ad2cp.00000.nc"
     nc_out_file = destination_dir / nc_out_fn
     if nc_out_file.exists():
         _log.debug(f"destination file {nc_out_file} already exists")
         req = f"https://erddap.observations.voiceoftheocean.org/erddap/files/ad2cp/{platform_serial}_M{mission}.ad2cp.00000.nc"
+        _log.debug(f"mission {platform_serial} M{mission} in explained missions. skipping")
+        if (platform_serial, mission) in explained_missions:
+            return
         if req in df.url.values:
             _log.debug(f"destination file {nc_out_file} already on erddap")
             return
@@ -119,17 +133,12 @@ def convert_ad2cp_to_nc(
         mailer("ADCP error", msg)
         _log.error(msg)
         return
-    elif len(source_files) > 1:
-        msg =f"multiple input ad2cp files in {source_dir}"
-        mailer("ADCP error", msg)
-        _log.error(msg)
-        return
-    source_file = source_files[0]
     if not destination_dir.exists():
         destination_dir.mkdir(parents=True)
-    if not destination_file.exists():
+    for source_file in source_files:
+        destination_file = destination_dir / source_file.name
         shutil.copy(source_file, destination_file)
-    convert_from_ad2cp(destination_dir, nc_out_file)
+    convert_from_ad2cp(destination_dir, nc_out_file, reprocess=True)
     if upload:
         subprocess.check_call(
             [
@@ -147,6 +156,7 @@ def convert_ad2cp_to_nc(
 def convert_all_ad2cp():
     _log.info("***** START *****")
     mission_list = list_missions(to_skip=skip_projects)
+    mission_list.sort()
     for mission_dir in mission_list:
         convert_ad2cp_to_nc(mission_dir)
     _log.info("***** END *****")
