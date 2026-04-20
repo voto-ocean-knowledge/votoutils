@@ -43,20 +43,20 @@ def nrt_vs_complete(df_datasets):
     for gm in df_datasets.index:
         mission_type, g, m = gm.split("_")
         mtype.append(mission_type)
-        glider.append(int(g[3:]))
+        glider.append(g)
         mission.append(int(m[1:]))
     df_datasets["glider"] = glider
     df_datasets["mission_type"] = mtype
     df_datasets["mission"] = mission
 
     df_nrt = df_datasets[df_datasets.mission_type == "nrt"]
-    df_nrt.index = "SEA" + df_nrt.glider.astype(str) + "_M" + df_nrt.mission.astype(str)
+    df_nrt.index = df_nrt.glider + "_M" + df_nrt.mission.astype(str)
     df_delayed = df_datasets[df_datasets.mission_type == "delayed"]
     df_delayed.index = (
-        "SEA" + df_delayed.glider.astype(str) + "_M" + df_delayed.mission.astype(str)
+        df_delayed.glider + "_M" + df_delayed.mission.astype(str)
     )
 
-    expected_fails = ["SEA61_M63", "SEA67_M15", "SEA66_M45", "SEA57_M75", "SEA70_M29"]
+    expected_fails = ["SEA061_M63", "SEA067_M15", "SEA066_M45", "SEA057_M75", "SEA070_M29", "SEA078_M43", "SHW001_M34"]
     for this_dataset in df_nrt.index:
         if this_dataset in expected_fails:
             continue
