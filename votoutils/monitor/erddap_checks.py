@@ -328,7 +328,8 @@ def main():
     # drop the allDatasets row and make the datasetID the index for easier reading
     df_datasets.set_index("datasetID", inplace=True)
     df_datasets.drop("allDatasets", inplace=True)
-    df_datasets = df_datasets[df_datasets.index.str.contains("SEA")]
+    df_datasets = df_datasets[np.logical_or(df_datasets.index.str.contains("SEA"), df_datasets.index.str.contains("SHW"))]
+    df_datasets = df_datasets[~df_datasets.index.str.contains("OG")]
     adcp_dataset_check(df_datasets)
     enough_datasets(df_datasets)
     df_datasets = nrt_vs_complete(df_datasets)
