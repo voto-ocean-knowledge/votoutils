@@ -10,5 +10,6 @@ ssh pipeline@88.99.244.110 mkdir -p $tgtdir
 echo ""
 echo rsync data
 rsync -v --stats $filesdir/NAV/*.$mission* "pipeline@88.99.244.110:$tgtdir"
+rsync -v --stats $filesdir/NAV_raw/*.$mission* "pipeline@88.99.244.110:$tgtdir"
 rsync -v --stats $filesdir/PLD_raw/*.$mission* "pipeline@88.99.244.110:$tgtdir"
 echo Finished

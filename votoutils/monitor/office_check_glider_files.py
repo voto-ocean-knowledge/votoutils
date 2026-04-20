@@ -39,7 +39,6 @@ skip_projects = [
     "8_KAMI-KZ_001",
     "11_Amundsen_Sea",
     "40_OMG_Training",
-    "46__Arkona_Temp",
     "temprary_data_store",
 ]
 
