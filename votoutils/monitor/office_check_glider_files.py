@@ -93,11 +93,14 @@ def good_mission(
     if not nav_path.is_dir():
         nav_path = mission_path / "NAV_raw"
     if not nav_path.is_dir():
+        nav_path = mission_path / "NAV_sub"
+    if not nav_path.is_dir():
         msg = f"no nav, {pretty_mission}"
         mailer("mission not processed", msg)
         return
     pld_files = list(pld_path.glob(f"{platform_serial.lower()}.{mission}.pld1.raw*"))
     nav_files = list(nav_path.glob(f"{platform_serial.lower()}.{mission}.gli.*"))
+    nav_dir = nav_path.parts[-1]
     if len(pld_files) == 0 or len(nav_files) == 0:
         msg = f"No matching files {pretty_mission} "
         mailer("mission not processed", msg)
@@ -119,6 +122,7 @@ def good_mission(
                     str(platform_serial),
                     str(mission),
                     str(mission_path),
+                    str(nav_dir)
                 ],
             )
             msg = f"uploaded raw data for {pretty_mission}"
