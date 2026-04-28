@@ -71,7 +71,7 @@ def add_voto_stuff(outname):
     total_dives = df.select("fnum").unique().shape[0]
     attrs["total_dives"] = total_dives
     filename = Path(outname).name.split('.')[0]
-    dataset_type = "nrt" if filename[-1] == 'R' else "delayed"
+    dataset_type = "nrt" if 'nrt' in str(outname) else "delayed"
     glider_serial = ds.attrs['platform_serial_number']
     deployment_id = ds.attrs['deployment_id']
     dataset_id = (
@@ -145,7 +145,34 @@ def proc_all_nrt():
         print(nc_out)
 
 
+def proc_all_delayed():
+    logf = "/data/log/pyglider_og1.log"
+    logging.basicConfig(
+        filename=logf,
+        filemode="a",
+        format="%(asctime)s %(levelname)-8s %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    all_yamls = list(Path("/data/deployment_yaml/og1").glob("*.yaml"))
+    mission_yamls = [yml for yml in all_yamls if "pyglider_mod" not in str(yml)]
+    mission_yamls.sort()
+
+    for yml_file in mission_yamls:
+        fn = yml_file.name
+        print(fn)
+        glider, mission = fn.split(".")[0].split('_M')
+        nc_out = proc_pyglider_og1(f"/data/data_raw/complete_mission/{glider}/M{mission}",
+                                   f"/data/data_l0_pyglider/OG_delayed/{glider}/M{mission}/",
+                                   f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
+                                   'raw')
+        if not nc_out:
+            continue
+        add_voto_stuff(nc_out)
+        print(nc_out)
+
 if __name__ == "__main__":
     #proc_one()
     #add_voto_stuff("/data/data_l0_pyglider/OG_nrt/SEA069/M48/timeseries/mission_timeseries_VOTO.nc")
-    proc_all_nrt()
+    #proc_all_nrt()
+    proc_all_delayed()

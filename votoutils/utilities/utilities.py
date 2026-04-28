@@ -53,10 +53,10 @@ def match_input_files(gli_infiles, pld_infiles):
 
 
 def encode_times(ds):
-    if 'time' in list(ds):
-        time_unit = 'time'
-    else:
+    if 'N_MEASUREMENTS' in ds.dims:
         time_unit = 'TIME'
+    else:
+        time_unit = 'time'
     if "units" in ds[time_unit].attrs.keys():
         ds[time_unit].attrs.pop("units")
     if "calendar" in ds[time_unit].attrs.keys():
