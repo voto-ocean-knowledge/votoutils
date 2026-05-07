@@ -4,7 +4,7 @@ To monitor a file, add the path to it and part of its expected last line to the 
 """
 
 import datetime
-
+from pathlib import Path
 import re
 import pandas as pd
 from votoutils.utilities.utilities import mailer
@@ -25,7 +25,7 @@ files_collection = (
     ("rsync_web.log", "total size is", 2),
     ("erddap_rsync.log", "total size is", 2),
     ("seaex-rsync.log", "total size is", 2),
-    ("to_og1_yaml.log.log", "COMPLETE", 2),
+    ("to_og1_yaml.log", "COMPLETE", 2),
     ("new_complete_mission.log", "Complete", 25),
     ("ctd_plots.log", "completed process all CTDs", 25),
     #("glider_transect.log", "End analysis", 2),
@@ -35,7 +35,11 @@ files_collection = (
 
 
 def check_log_file(file, expected_last_line, hours):
-    file_loc = f"/data/log/{file}"
+    file_loc = Path(f"/data/log/{file}")
+    if not file_loc.exists():
+        msg = f"failed process: {file} does not exists"
+        mailer("pipeline-error", msg)
+        return
     try:
         df = pd.read_csv(file_loc, sep="never in a million yrs", engine="python")
         skiplines = len(df) - 50
