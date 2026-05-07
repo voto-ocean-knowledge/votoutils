@@ -15,7 +15,7 @@ _log = logging.getLogger(__name__)
 files_collection = (
     ("voto_stats_data.log", "Finished computing stats", 2),
     ("pyglider_nrt.log", "Finished nrt processing", 2),
-    ("voto_add_sailbuoy.log", "Finished download of sailbuoy data", 2),
+    #("voto_add_sailbuoy.log", "Finished download of sailbuoy data", 2),
     ("sailbuoy.log", "Finished processing nrt sailbuoy data", 2),
     ("voto_add_data.log", "nrt mission add complete", 2),
     ("nrt_plots.log", "End plot creation", 2),
@@ -25,6 +25,7 @@ files_collection = (
     ("rsync_web.log", "total size is", 2),
     ("erddap_rsync.log", "total size is", 2),
     ("seaex-rsync.log", "total size is", 2),
+    ("to_og1_yaml.log.log", "COMPLETE", 2),
     ("new_complete_mission.log", "Complete", 25),
     ("ctd_plots.log", "completed process all CTDs", 25),
     #("glider_transect.log", "End analysis", 2),
