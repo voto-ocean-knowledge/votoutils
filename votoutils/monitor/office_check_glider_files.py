@@ -28,7 +28,8 @@ explained_missions = [('SEA067', 15),
  ('SEA078', 43),
                       ]
 
-expected_missmatch = (("SEA055", 87),)
+expected_missmatch = (("SEA055", 87),
+                      ("SHW002", 26))
 
 skip_projects = [
     "1_Folder_Template",
@@ -175,7 +176,7 @@ def list_missions(to_skip=()):
             good_missions.append(mission_path)
         except:
             print(f"{mission_path} is a bad one")
-
+    good_missions.sort()
     return good_missions
 
 
