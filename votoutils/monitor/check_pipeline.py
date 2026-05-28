@@ -45,6 +45,8 @@ def check_log_file(file, expected_last_line, hours):
         skiplines = len(df) - 50
     except pd.errors.ParserError:
         skiplines = 0
+    if 'rsync' in file:
+        skiplines = 200
     last_line = ""
     dt_base = datetime.datetime(1970, 1, 1)
     dt_sh = datetime.datetime(1970, 1, 1)

@@ -151,7 +151,10 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind, reprocess=False):
         null_val = np.nan
         if 'TIME' in vname:
             null_val = np.datetime64("NaT")
-        non_surface_mask = ~np.logical_or(ds["NAV_RESOURCE"].values == 116, ds["NAV_RESOURCE"].values == 119)
+        if 'DEAD_RECKONING' in list(ds):
+            non_surface_mask = ds['DEAD_RECKONING'].values != 0
+        else:
+            non_surface_mask = ~np.logical_or(ds["NAV_RESOURCE"].values == 116, ds["NAV_RESOURCE"].values == 119)
         ds[f"{vname}_GPS"].values[non_surface_mask] = null_val
         ds[f"{vname}_GPS"].attrs["long_name"] = f"{vname.lower()} of each GPS location"
     ds["LATITUDE_GPS"].attrs["vocabulary"] = (
@@ -227,8 +230,17 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     glider = "SEA045"
-    mission = 79
-    nc_out = proc_pyglider_og1(f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
-                               f"/data/data_l0_pyglider/OG_nrt/{glider}/M{mission}/",
-                               f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
-                               'sub')
+    mission = 37
+    kind='raw'
+    if kind == 'raw':
+        nc_out = proc_pyglider_og1(f"/data/data_raw/complete_mission/{glider}/M{mission}",
+                                   f"/data/data_l0_pyglider/OG_complete_mission/{glider}/M{mission}/",
+                                   f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
+                                   'raw',
+                                   reprocess=True)
+    else:
+        nc_out = proc_pyglider_og1(f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
+                                   f"/data/data_l0_pyglider/OG_nrt/{glider}/M{mission}/",
+                                   f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
+                                   'sub',
+                                   reprocess=True)

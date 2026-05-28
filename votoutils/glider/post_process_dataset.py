@@ -1,5 +1,6 @@
 import numpy as np
 import re
+import datetime
 from votoutils.glider.post_process_optics import betasw_ZHH2009
 from votoutils.utilities.geocode import filter_territorial_data, nan_bad_locations, flag_bad_locations, locs_to_seas
 from votoutils.glider.post_process_ctd import (
@@ -183,6 +184,22 @@ def hydrostatic_depth(ds):
     return ds
 
 
+def fix_specific_mission(ds):
+    platform_mission = (ds.attrs['platform_serial'], int(ds.attrs['deployment_id']))
+    match platform_mission:
+        case ('SHW002', 26):
+            # On this mission the nav memory card failed after 3 weeks. Need to make artificial
+            # dead reckoning data to fix this, as this is needed for the ADCP processing
+            dead = ds['dead_reckoning'].values
+            dead[ds['time'] > np.datetime64('2026-05-10T16:00:00')] = 1
+            dead[np.logical_and(ds['time'] > np.datetime64('2026-05-10T16:00:00'), ds['depth']< 2.5)] = 0
+            ds['dead_reckoning'].values = dead
+            ds['dead_reckoning'].attrs['comment'] = 'Dead reckoning manually created after 2026-05-10T16:00:00 when glider memory card failed to enable ADCP processing'
+
+    return ds
+
+
+
 def post_process(ds):
     _log.info("start post process")
     ds = salinity_pressure_correction(ds)
@@ -197,6 +214,7 @@ def post_process(ds):
     ds = nan_bad_depths(ds)
     ds = correct_locations(ds)
     ds = hydrostatic_depth(ds)
+    ds = fix_specific_mission(ds)
     ds = ds.sortby("time")
     _log.info("complete post process")
     return ds

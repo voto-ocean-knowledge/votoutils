@@ -98,6 +98,7 @@ def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
         clean_nrt_bad_files(input_dir)
     rawdir = str(pathlib.Path(input_dir)) + "/"
     output_path = pathlib.Path(output_dir)
+    safe_delete([output_path])
     if not output_path.exists():
         output_path.mkdir(parents=True)
     rawncdir = output_dir + "rawnc/"
@@ -109,7 +110,6 @@ def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
     )
     deploymentyaml = f"/data/tmp/deployment_yml/{platform_serial}_M{str(mission)}.yml"
 
-    safe_delete([rawncdir, l0tsdir, profiledir, griddir])
     clean_infiles(input_dir)
     seaexplorer.raw_to_rawnc(rawdir, rawncdir, original_deploymentyaml)
     # merge individual netcdf files into single netcdf files *.gli*.nc and *.pld1*.nc
@@ -118,10 +118,11 @@ def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
     with open(original_deploymentyaml) as fin:
         deployment = yaml.safe_load(fin)
     nav_nc = list(pathlib.Path(rawncdir).glob("*rawgli.parquet"))[0]
+    pld_nc = list(pathlib.Path(rawncdir).glob("*pld.parquet"))[0]
     basin = get_seas_merged_nav_nc(nav_nc)
     deployment["metadata"]["basin"] = basin
     # More custom metadata
-    df = pl.read_parquet(nav_nc)
+    df = pl.read_parquet(pld_nc)
     total_dives = df.select("fnum").unique().shape[0]
     deployment["metadata"]["total_dives"] = total_dives
     dataset_type = "nrt" if kind == "sub" else "delayed"
@@ -177,8 +178,20 @@ def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
     grid_glider_data.make_gridfile_gliderad2cp(platform_serial, mission, kind)
 
 if __name__ == '__main__':
-    glider = "SEA045"
-    mission = 43
-    proc_pyglider_l0(glider, mission, 'sub', f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv", f"/data/data_l0_pyglider/nrt/{glider}/M{mission}/")
+    glider = "SHW002"
+    mission = 26
+    kind = 'raw'
+    if kind == 'raw':
+        nc_out = proc_pyglider_l0(glider, mission, 'raw',f"/data/data_raw/complete_mission/{glider}/M{mission}",
+                                   f"/data/data_l0_pyglider/complete_mission/{glider}/M{mission}/",
+                                  )
+    else:
+        nc_out = proc_pyglider_l0(glider, mission, 'sub', f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
+                                   f"/data/data_l0_pyglider/nrt/{glider}/M{mission}/",
+                                  )
+
+    
+    #proc_pyglider_l0(glider, mission, 'sub', f"/data/data_raw/nrt/{glider}/0000{str(mission)}/C-Csv", f"/data/data_l0_pyglider/nrt/{glider}/M{mission}/")
+    #proc_pyglider_l0(glider, mission, 'raw', f"/data/data_raw/complete_mission/{glider}/M{str(mission)}", f"/data/data_l0_pyglider/complete_mission/{glider}/M{mission}/")
     #proc_pyglider_l0("SEA079", 20, 'sub', "/data/data_raw/nrt/SEA079/000020/C-Csv", "/data/data_l0_pyglider/nrt/SEA079/M20/")
     #proc_pyglider_l0("SHW001", 34, 'sub', "/data/data_raw/nrt/SHW001/000034/C-Csv/", "/data/data_l0_pyglider/nrt/SHW001/M34/")

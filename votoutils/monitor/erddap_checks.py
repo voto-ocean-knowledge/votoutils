@@ -333,7 +333,10 @@ def main():
     adcp_dataset_check(df_datasets)
     enough_datasets(df_datasets)
     df_datasets = nrt_vs_complete(df_datasets)
-    datasets_to_emodnet(df_datasets)
+    try:
+        datasets_to_emodnet(df_datasets)
+    except:
+        mailer('cherddap', 'emodnet check failed')
     bad_depths(df_datasets)
     bad_dataset_id(df_datasets)
     delayed = df_datasets.index[df_datasets.index.str[:3] == "del"]
