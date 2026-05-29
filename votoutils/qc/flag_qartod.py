@@ -73,7 +73,7 @@ def get_configs():
             "oxygen_concentration": {
                 "qartod": {
                     "gross_range_test": {
-                        "suspect_span": [0, 350],
+                        "suspect_span": [0, 470],
                         "fail_span": [0, 500],
                     },
                     "spike_test": {"suspect_threshold": 10, "fail_threshold": 50},
