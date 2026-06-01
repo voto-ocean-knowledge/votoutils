@@ -197,20 +197,28 @@ def read_ctd(ctd_csv, locfile):
             if "File Date" in line:
                 if "-" in line:
                     sep = "-"
-            if "Measurement" in line:
-                skips = i
-                df = pd.read_csv(ctd_csv, skiprows=skips, index_col=False)
-                df["datetime"] = pd.to_datetime(
-                    df["Measurement Date/Time"],
-                    format=f"%Y{sep}%m{sep}%d %H:%M:%S",
-                )
-                df = df.drop(["Measurement Date/Time"], axis=1)
-                break
+            if "StartTime" in line:
+                start_str = line.split('=')[1].replace('\n', '')
+                start_time = datetime.datetime.strptime(start_str, "%Y/%m/%d %H:%M:%S")
+
             if line[:4] == "Date":
                 skips = i
                 df = pd.read_csv(ctd_csv, skiprows=skips)
                 df["datetime"] = pd.to_datetime(df["Date"] + "T" + df["Time"])
                 df = df.drop(["Date", "Time"], axis=1)
+                break
+            if "[Item]" in line:
+                skips = i + 1
+                df = pd.read_csv(ctd_csv, skiprows=skips, index_col=False)
+                if "Measurement Date/Time" in list(df):
+                    df = df[df["Measurement Date/Time"] != 'Error']
+                    df["datetime"] = pd.to_datetime(
+                        df["Measurement Date/Time"],
+                        format=f"%Y{sep}%m{sep}%d %H:%M:%S",
+                    )
+                    df = df.drop(["Measurement Date/Time"], axis=1)
+                else:
+                    df["datetime"] = start_time
                 break
     with open(ctd_csv) as file:
         for i, line in enumerate(file):

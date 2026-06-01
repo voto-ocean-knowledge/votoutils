@@ -27,6 +27,7 @@ files_collection = (
     ("seaex-rsync.log", "total size is", 2),
     ("to_og1_yaml.log", "COMPLETE", 2),
     ("new_complete_mission.log", "Complete", 25),
+    ("process_ctd.log", "Complete process ctds", 25),
     ("ctd_plots.log", "completed process all CTDs", 25),
     #("glider_transect.log", "End analysis", 2),
     ("metadata_tables.log", "End processing", 25),

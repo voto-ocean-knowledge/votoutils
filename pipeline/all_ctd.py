@@ -64,6 +64,11 @@ def main():
     for index, cast in enumerate(casts):
         cast["cast_number"] = index
     df = pd.concat(casts)
+    for col_name in df:
+        try:
+            df[col_name] = df[col_name].astype(float)
+        except:
+            _log.warning(f"failed to convert {col_name} to float")
     ds = ds_from_df(df)
     _log.info(f"total ctds = {fn}")
     rename_dict = {  #'TIME': "time",
