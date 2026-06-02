@@ -2,12 +2,15 @@ import pandas as pd
 import xarray as xr
 from pathlib import Path
 import datetime
-import logging
 import gsw
 from seabird.cnv import fCNV
 from votoutils.utilities.utilities import mailer
 from votoutils.qc.flag_qartod import flag_ioos, ioos_qc
-
+import logging
+# because the seabird cnv library screws with the logger
+from importlib import reload
+logging.shutdown()
+reload(logging)
 _log = logging.getLogger(__name__)
 
 
