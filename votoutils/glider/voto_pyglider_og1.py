@@ -3,10 +3,11 @@ import polars as pl
 import xarray as xr
 import logging
 from pathlib import Path
-
+import subprocess
+from votoutils.upload.sync_functions import sync_script_dir
 from votoutils.glider.process_pyglider_og1 import proc_pyglider_og1
 from votoutils.utilities.geocode import get_seas_merged_nav_nc
-from votoutils.utilities.utilities import encode_times, encode_times_og1
+from votoutils.utilities.utilities import encode_times
 
 
 def set_profile_numbers(ds):
@@ -67,10 +68,10 @@ def add_voto_stuff(outname):
     basin = get_seas_merged_nav_nc(nav_nc)
     attrs["basin"] = basin
     # More custom metadata
-    df = pl.read_parquet(nav_nc)
+    pld_nc = list(rawncdir.glob("*pld.parquet"))[0]
+    df = pl.read_parquet(pld_nc)
     total_dives = df.select("fnum").unique().shape[0]
     attrs["total_dives"] = total_dives
-    filename = Path(outname).name.split('.')[0]
     dataset_type = "nrt" if 'nrt' in str(outname) else "delayed"
     glider_serial = ds.attrs['platform_serial_number']
     deployment_id = ds.attrs['deployment_id']
@@ -82,12 +83,15 @@ def add_voto_stuff(outname):
     attrs["variables"] = list(ds.variables)
     attrs["glider_serial"] = glider_serial
     ds.attrs = attrs
-    outname_voto = f"{dataset_id}.nc"
+    outname_voto = f"{ds.attrs['id']}.nc"
     outpath_voto = out_path.parent / outname_voto
     drop_vars = {'profile_index', 'profile_direction'}.intersection(set(ds.data_vars))
     ds = ds.drop_vars(drop_vars)
     ds = encode_times(ds)
     ds.to_netcdf(outpath_voto)
+    ds.close()
+    out_path.unlink()
+    
 
 
 def proc_one():
@@ -169,6 +173,14 @@ def proc_all_delayed():
         if not nc_out:
             continue
         add_voto_stuff(nc_out)
+        subprocess.check_call(
+            [
+                "/usr/bin/bash",
+                sync_script_dir / "send_to_erddap_og_delayed.sh",
+                str(glider),
+                str(mission),
+            ],
+        )
         print(nc_out)
 
 if __name__ == "__main__":

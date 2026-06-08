@@ -213,7 +213,7 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind, reprocess=False):
             dt_out = datetime.datetime.strptime(dt_in, "%Y-%m-%dT%H:%M:%S")
             ds.attrs[date_attr] = dt_out.strftime(og_date_format)
     ds.attrs["start_date"] = ts
-    ds.attrs["id"] = f"sea{str(ds.attrs['glider_serial']).zfill(3)}_{ts}_{postscript}"
+    ds.attrs["id"] = f"{str(ds.attrs['glider_serial']).zfill(3)}_{ts}_{postscript}"
     ds.attrs["date_created"] = dt_created
     ds.attrs['Conventions'] = deployment_original['metadata']['Conventions']
     ds.to_netcdf(outname)
