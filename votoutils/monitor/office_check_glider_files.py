@@ -31,6 +31,10 @@ explained_missions = [('SEA067', 15),
 expected_missmatch = (("SEA055", 87),
                       ("SHW002", 26))
 
+expected_bad_download_dir = (
+    Path('/mnt/samba/01_SAT_Missions/1_Downloaded/SEA061_PLD078/20220310'),
+)
+
 skip_projects = [
     "1_Folder_Template",
     "00_Folder_Template",
@@ -139,7 +143,6 @@ def list_missions(to_skip=()):
         str_proj = str(proj)
         for skip in to_skip:
             if skip in str_proj:
-                print(f"skipping {skip}")
                 good = False
         if not good:
             continue
@@ -164,6 +167,12 @@ def list_missions(to_skip=()):
     all_mission_paths = []
     for glider_dir in glider_dirs:
         mission_dirs = list(glider_dir.glob("S*"))
+        all_dirs = list(glider_dir.glob("*"))
+        all_dirs = [directory for directory in all_dirs if "DS_Store" not in str(directory)]
+        all_dirs = set(all_dirs).difference(expected_bad_download_dir)
+        difference = set(all_dirs).difference(mission_dirs)
+        if difference:
+            mailer("unsorted-mission", f"likely bad directory name {difference}")
         all_mission_paths.append(mission_dirs)
     all_mission_paths = list(chain(*all_mission_paths))
     good_missions = []
