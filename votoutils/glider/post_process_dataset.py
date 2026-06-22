@@ -187,6 +187,13 @@ def hydrostatic_depth(ds):
 def fix_specific_mission(ds):
     platform_mission = (ds.attrs['platform_serial'], int(ds.attrs['deployment_id']))
     match platform_mission:
+        case ('SHW003', 13):
+            # During this mission, pressure sensor was not corrected for air pressure
+            ds['pressure'].values -= 10
+            ds['depth'].values -= 10
+            ds['pressure'].attrs['comment'] += 'manually corrected for air pressure offset'
+            ds['depth'].attrs['comment'] += 'manually corrected for air pressure offset'
+
         case ('SHW002', 26):
             # On this mission the nav memory card failed after 3 weeks. Need to make artificial
             # dead reckoning data to fix this, as this is needed for the ADCP processing
@@ -199,9 +206,17 @@ def fix_specific_mission(ds):
     return ds
 
 
+def add_uncorr_variables(ds):
+    ds['temperature_uncorrected'] = ds['temperature'].copy()
+    ds['temperature_uncorrected'].attrs['comment'] = 'uncorrected temperature'
+    ds['conductivity_uncorrected'] = ds['conductivity'].copy()
+    ds['conductivity_uncorrected'].attrs['comment'] = 'uncorrected conductivity'
+    return ds
 
 def post_process(ds):
     _log.info("start post process")
+    ds = fix_specific_mission(ds)
+    #ds = add_uncorr_variables()
     ds = salinity_pressure_correction(ds)
     ds = correct_rbr_lag(ds)
     ds = recalc_oxygen(ds)
@@ -214,7 +229,6 @@ def post_process(ds):
     ds = nan_bad_depths(ds)
     ds = correct_locations(ds)
     ds = hydrostatic_depth(ds)
-    ds = fix_specific_mission(ds)
     ds = ds.sortby("time")
     _log.info("complete post process")
     return ds
