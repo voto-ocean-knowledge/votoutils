@@ -6,6 +6,8 @@ import yaml
 import numpy as np
 import polars as pl
 import xarray as xr
+import logging
+_log = logging.getLogger(__name__)
 
 from votoutils.glider import grid_glider_data
 from votoutils.glider.pre_process import clean_infiles
@@ -38,6 +40,19 @@ def safe_delete(directories):
 
 def set_profile_numbers(ds):
     ds["dive_num"] = np.around(ds["dive_num"]).astype(int)
+    df = ds.to_pandas()
+    dive_nums = np.unique(ds.dive_num)
+    min_time = np.nanmin(ds.time.values)
+    ds['good_dive'] = xr.DataArray(np.ones(len(ds.time)), dims='time')
+    for num in dive_nums:
+        df_dive = df[df.dive_num == num]
+        if np.nanmin(df_dive.index) < min_time:
+            _log.warning(f'invalid timestamps found in dive number {num}. Dropping')
+            ds['good_dive'].values[ds['dive_num'] == num] = np.nan
+            continue
+        min_time = np.nanmin(df_dive.index)
+    ds = ds.dropna(dim='time', subset=['good_dive'])
+    ds = ds.drop_vars(['good_dive'])
     df = ds.to_pandas()
     df["profile_index"] = 1
     deepest_points = []
