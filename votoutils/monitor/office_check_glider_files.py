@@ -36,14 +36,14 @@ expected_bad_download_dir = (
 )
 
 skip_projects = [
-    "1_Folder_Template",
-    "00_Folder_Template",
-    "2_Simulations",
-    "3_SAT_Missions",
-    "10_Oman_001",
-    "8_KAMI-KZ_001",
-    "11_Amundsen_Sea",
-    "40_OMG_Training",
+    "Folder_Template",
+    "Folder_Template",
+    "Simulations",
+    "SAT_Missions",
+    "Oman_001",
+    "KAMI-KZ_001",
+    "Amundsen_Sea",
+    "OMG_Training",
     "temprary_data_store",
 ]
 
