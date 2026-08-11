@@ -186,13 +186,14 @@ def hydrostatic_depth(ds):
 
 def fix_specific_mission(ds):
     platform_mission = (ds.attrs['platform_serial'], int(ds.attrs['deployment_id']))
+    if 'legato4' in str(ds.attrs['ctd'].lower()):
+        # The legato4 pressure sensor is not corrected for air pressure
+        ds['pressure'].values -= 10
+        ds['depth'].values -= 10
+        ds['pressure'].attrs['comment'] += 'manually corrected for air pressure offset'
+        ds['depth'].attrs['comment'] += 'manually corrected for air pressure offset'
+
     match platform_mission:
-        case ('SHW003', 13):
-            # During this mission, pressure sensor was not corrected for air pressure
-            ds['pressure'].values -= 10
-            ds['depth'].values -= 10
-            ds['pressure'].attrs['comment'] += 'manually corrected for air pressure offset'
-            ds['depth'].attrs['comment'] += 'manually corrected for air pressure offset'
 
         case ('SHW002', 26):
             # On this mission the nav memory card failed after 3 weeks. Need to make artificial
