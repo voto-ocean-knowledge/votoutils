@@ -106,12 +106,14 @@ def set_profile_numbers(ds):
     return ds
 
 
-def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
+def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir, gts_ingest= False):
     if kind not in ["raw", "sub"]:
         raise ValueError("kind must be raw or sub")
     if kind == "sub":
         clean_nrt_bad_files(input_dir)
     rawdir = str(pathlib.Path(input_dir)) + "/"
+    if gts_ingest:
+        output_dir = output_dir[:-1] + '_IOOS/'
     output_path = pathlib.Path(output_dir)
     safe_delete([output_path])
     if not output_path.exists():
@@ -123,6 +125,9 @@ def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
     original_deploymentyaml = (
         f"/data/deployment_yaml/mission_yaml/{platform_serial}_M{str(mission)}.yml"
     )
+    if gts_ingest:
+        original_deploymentyaml = original_deploymentyaml.replace('.yml', '_ioos.yml')
+
     deploymentyaml = f"/data/tmp/deployment_yml/{platform_serial}_M{str(mission)}.yml"
 
     clean_infiles(input_dir)
@@ -155,6 +160,8 @@ def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
     with open("/data/deployment_yaml/deployment_profile_variables.yml", "r") as fin:
         profile_variables = yaml.safe_load(fin)
     deployment["profile_variables"] = profile_variables
+    if gts_ingest:
+        deployment['profile_variables']['instrument_ctd'] =  deployment['glider_devices']['ctd']
     with open(deploymentyaml, "w") as fin:
         yaml.dump(deployment, fin)
     # Make level-0 timeseries netcdf file from the raw files
@@ -174,7 +181,8 @@ def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
         "desired_heading",
     ]
     ds = xr.open_dataset(outname)
-    ds = flagger(ds)
+    if 'gts_ingest' not in ds.attrs.keys():
+        ds = flagger(ds)
     ds_variables = list(ds)
     for var in ds_variables:
         if var in int_vars or var[-2:] == "qc":
@@ -186,6 +194,8 @@ def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
     ds = set_best_dtype(ds)
     ds = encode_times(ds)
     ds.to_netcdf(outname)
+    if 'gts_ingest' in ds.attrs.keys():
+        ncprocess.extract_timeseries_profiles(outname, profiledir, deploymentyaml)
     if kind=='raw':
         from votoutils.ad2cp.ad2cp_proc import adcp_data_present, proc_gliderad2cp
         if adcp_data_present(platform_serial, mission):
@@ -193,16 +203,16 @@ def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
     grid_glider_data.make_gridfile_gliderad2cp(platform_serial, mission, kind)
 
 if __name__ == '__main__':
-    glider = "SHW002"
-    mission = 26
-    kind = 'raw'
+    glider = "SEA044"
+    mission = 109
+    kind = 'sub'
     if kind == 'raw':
         nc_out = proc_pyglider_l0(glider, mission, 'raw',f"/data/data_raw/complete_mission/{glider}/M{mission}",
-                                   f"/data/data_l0_pyglider/complete_mission/{glider}/M{mission}/",
+                                   f"/data/data_l0_pyglider/complete_mission/{glider}/M{mission}/"
                                   )
     else:
         nc_out = proc_pyglider_l0(glider, mission, 'sub', f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
-                                   f"/data/data_l0_pyglider/nrt/{glider}/M{mission}/",
+                                   f"/data/data_l0_pyglider/nrt/{glider}/M{mission}/", gts_ingest=True
                                   )
 
     

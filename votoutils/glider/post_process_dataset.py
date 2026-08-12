@@ -222,14 +222,16 @@ def post_process(ds):
     ds = correct_rbr_lag(ds)
     ds = recalc_oxygen(ds)
     ds = remove_jammed_locations(ds)
-    ds = process_altimeter(ds)
+    if 'gts_ingest' not in ds.attrs.keys():
+        ds = process_altimeter(ds)
     ds = filter_territorial_data(ds)
     if "backscatter_scaled" in list(ds):
         ds = calculate_bbp(ds)
     ds = fix_variables(ds)
     ds = nan_bad_depths(ds)
-    ds = correct_locations(ds)
-    ds = hydrostatic_depth(ds)
+    if 'gts_ingest' not in ds.attrs.keys():
+        ds = correct_locations(ds)
+        ds = hydrostatic_depth(ds)
     ds = ds.sortby("time")
     _log.info("complete post process")
     return ds
