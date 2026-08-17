@@ -26,6 +26,7 @@ explained_missions = [('SEA067', 15),
  ('SEA068', 45),
  ('SEA079', 38),
  ('SEA078', 43),
+ ('SEA069', 67),
                       ]
 
 expected_missmatch = (("SEA055", 87),
