@@ -29,8 +29,11 @@ explained_missions = [('SEA067', 15),
  ('SEA069', 67),
                       ]
 
-expected_missmatch = (("SEA055", 87),
-                      ("SHW002", 26))
+expected_missmatch = (
+    ("SEA055", 87),
+    ("SEA056", 107),
+    ("SHW002", 26)
+                      )
 
 expected_bad_download_dir = (
     Path('/mnt/samba/01_SAT_Missions/1_Downloaded/SEA061_PLD078/20220310'),
