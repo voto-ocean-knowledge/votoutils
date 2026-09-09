@@ -50,6 +50,11 @@ def remove_territorial_waters_adcp(infile_path, gliderfile_path, outfile_path, p
         ADCP = ADCP.drop_vars(["MatlabTimeStamp"])
     config = xr.open_dataset(infile_path, group='Config')
     glider_data = xr.open_dataset(gliderfile_path)
+    if 'altimeter' not in glider_data.variables:
+        _log.info("no data in territorial water. Copying as-is")
+        ADCP.to_netcdf(outfile_path, "w", group="Data/Average", format="NETCDF4")
+        config.to_netcdf(outfile_path, "a", group="Config", format="NETCDF4")
+        return
     df_glider = pd.DataFrame(
         {'altimeter': glider_data.altimeter, 'dive_num': glider_data.dive_num.astype(int), 'pressure': glider_data.pressure},
         index=glider_data.time)

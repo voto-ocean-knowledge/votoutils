@@ -14,7 +14,7 @@ def clean_2019(infile):
     if ".gli." not in infile and ".pld1." not in infile:
         return
     try:
-        df = pl.read_csv(infile, separator=";", ignore_errors=True)
+        df = pl.read_csv(infile, separator=";", ignore_errors=True, truncate_ragged_lines=True)
     except Exception as e:
         _log.warning(f"Exception reading {infile}: {e}")
         _log.warning(f"Could not read {infile}. Deleting")
