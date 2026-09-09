@@ -159,11 +159,16 @@ def apply_ioos_flags(ds, config):
     proc_record = str(call)
     return flag_vals, proc_record
 
-
-def flag_ioos(ds):
+def flag_ioos(ds, baltic=True):
+    if ds.attrs['sea_name'].lower != 'baltic':
+        baltic = False
     configs = get_configs()
-    for config_name, config in configs.items():
-        config[config_name]['qartod']['location_test'] = {'bbox': location_bbox_baltic}
+    if baltic:
+        for config_name, config in configs.items():
+            config[config_name]['qartod']['location_test'] = {'bbox': location_bbox_baltic}
+    else:
+        configs['conductivity']['conductivity']['qartod'] = {"gross_range_test": {"suspect_span": [5, 60], "fail_span": [2, 65]}}
+        configs['salinity']['conductivity']['qartod'] = {"gross_range_test": {"suspect_span": [5, 60], "fail_span": [2, 65]}}
     # If the glider has a GPCTD, use this for the salinity config
     if ds["conductivity"].attrs["units"] == "S m-1":
         configs["salinity"]["conductivity"]["qartod"]["gross_range_test"] = {
