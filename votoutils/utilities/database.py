@@ -1,4 +1,5 @@
 import datetime
+import pandas as pd
 import sqlite3
 from contextlib import closing
 
@@ -13,10 +14,16 @@ def init_db(connection):
     connection.commit()
 
 
-def display_processed(connection):
-    cursor = connection.cursor()
-    cursor.execute("SELECT * FROM processed")
-    print(cursor.fetchall())
+def display_processed():
+    with closing(sqlite3.connect(db_file)) as connection:
+        cursor = connection.cursor()
+        output = list(cursor.execute("SELECT * FROM processed").fetchall())
+        missions = [result[1] for result in output]
+        ptimes = [result[2] for result in output]
+        df = pd.DataFrame({'missions': missions, 'datetime': ptimes})
+        df = df.sort_values('missions')
+        print(df)
+
 
 def last_processed_time(mission_id):
     with closing(sqlite3.connect(db_file)) as connection:
@@ -46,11 +53,6 @@ def update_processed_time(mission_id, proc_time):
 
         connection.commit()
 
-def main():
-    now = datetime.datetime.now()
-    update_processed_time('SEA043_M44', now)
-    print(last_processed_time('SEA043_M44'))
-    print(last_processed_time('SEA073_M44'))
 
 if __name__ == '__main__':
-    main()
+    display_processed()

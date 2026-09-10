@@ -5,7 +5,6 @@ import xarray as xr
 import logging
 from pathlib import Path
 import subprocess
-import logging
 from votoutils.upload.sync_functions import sync_script_dir
 from votoutils.glider.process_pyglider_og1 import proc_pyglider_og1
 from votoutils.utilities.geocode import get_seas_merged_nav_nc
@@ -126,9 +125,9 @@ def proc_one():
         return
     add_voto_stuff(nc_out)
 
-def proc_all_nrt():
+def proc_all(kind='nrt'):
     cutoff = datetime.datetime.now() - datetime.timedelta(days=7)
-    logf = "/data/log/pyglider_og1.log"
+    logf = f"/data/log/{kind}_pyglider_og1.log"
     logging.basicConfig(
         filename=logf,
         filemode="a",
@@ -147,58 +146,37 @@ def proc_all_nrt():
             _log.error(f"skip {fn} for now")
             continue
 
-        mission_id = f'OG_nrt_{fn}'
+        mission_id = f'OG_{kind}_{fn}'
         last_proc = database.last_processed_time(mission_id)
         if last_proc > cutoff:
             _log.info(f'{mission_id} processed after cutoff, skipping')
             continue
-        glider, mission = fn.split.split('_M')
-        nc_out = proc_pyglider_og1(f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
-                                   f"/data/data_l0_pyglider/OG_nrt/{glider}/M{mission}/",
+        glider, mission = fn.split('_M')
+        pyglider_kind = 'sub' if kind=='nrt' else 'raw'
+        if kind == 'nrt':
+            indir = f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv"
+        else:
+            indir = f"/data/data_raw/complete_mission/{glider}/M{mission}"
+        nc_out = proc_pyglider_og1(indir,
+                                   f"/data/data_l0_pyglider/OG_{kind}/{glider}/M{mission}/",
                                    f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
-                                   'sub', reprocess=True)
+                                   pyglider_kind, reprocess=True)
         if not nc_out:
             continue
         add_voto_stuff(nc_out)
+        if kind=='delayed':
+            subprocess.check_call(
+                [
+                    "/usr/bin/bash",
+                    sync_script_dir / "send_to_erddap_og_delayed.sh",
+                    str(glider),
+                    str(mission),
+                ],
+            )
         database.update_processed_time(mission_id, datetime.datetime.now())
 
-
-def proc_all_delayed():
-    logf = "/data/log/pyglider_og1.log"
-    logging.basicConfig(
-        filename=logf,
-        filemode="a",
-        format="%(asctime)s %(levelname)-8s %(message)s",
-        level=logging.INFO,
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-    all_yamls = list(Path("/data/deployment_yaml/og1").glob("*.yaml"))
-    mission_yamls = [yml for yml in all_yamls if "pyglider_mod" not in str(yml)]
-    mission_yamls.sort()
-
-    for yml_file in mission_yamls:
-        fn = yml_file.name
-        print(fn)
-        glider, mission = fn.split(".")[0].split('_M')
-        nc_out = proc_pyglider_og1(f"/data/data_raw/complete_mission/{glider}/M{mission}",
-                                   f"/data/data_l0_pyglider/OG_delayed/{glider}/M{mission}/",
-                                   f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
-                                   'raw')
-        if not nc_out:
-            continue
-        add_voto_stuff(nc_out)
-        subprocess.check_call(
-            [
-                "/usr/bin/bash",
-                sync_script_dir / "send_to_erddap_og_delayed.sh",
-                str(glider),
-                str(mission),
-            ],
-        )
-        print(nc_out)
 
 if __name__ == "__main__":
     #proc_one()
     #add_voto_stuff("/data/data_l0_pyglider/OG_nrt/SEA069/M48/timeseries/mission_timeseries_VOTO.nc")
-    proc_all_nrt()
-    #proc_all_delayed()
+    proc_all()
