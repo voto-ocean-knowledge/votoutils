@@ -165,7 +165,7 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind, reprocess=False):
     )
     ds = convert_seaexplorer_phase(ds)
 
-    
+    ds.attrs['id'] = ds.attrs['deployment_name']
     # OG1 dimensionless variables
     ds["TRAJECTORY"] = xr.DataArray(
         ds.attrs["id"],
@@ -213,7 +213,6 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind, reprocess=False):
             dt_out = datetime.datetime.strptime(dt_in, "%Y-%m-%dT%H:%M:%S")
             ds.attrs[date_attr] = dt_out.strftime(og_date_format)
     ds.attrs["start_date"] = ts
-    ds.attrs["id"] = f"{str(ds.attrs['glider_serial']).zfill(3)}_{ts}_{postscript}"
     ds.attrs["date_created"] = dt_created
     ds.attrs['Conventions'] = deployment_original['metadata']['Conventions']
     ds.to_netcdf(outname)
@@ -231,7 +230,7 @@ if __name__ == "__main__":
     )
     glider = "SEA045"
     mission = 37
-    kind='raw'
+    kind='sub'
     if kind == 'raw':
         nc_out = proc_pyglider_og1(f"/data/data_raw/complete_mission/{glider}/M{mission}",
                                    f"/data/data_l0_pyglider/OG_complete_mission/{glider}/M{mission}/",

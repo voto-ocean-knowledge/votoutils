@@ -22,6 +22,7 @@ logging.basicConfig(
 def proc_all_nrt(reprocess = True):
     _log.info("Start nrt reprocessing")
     yml_files = list(pathlib.Path("/data/deployment_yaml/mission_yaml").glob("*.yml"))
+    yml_files.sort()
     glidermissions = []
     for yml_path in yml_files:
         fn = yml_path.name.split(".")[0]

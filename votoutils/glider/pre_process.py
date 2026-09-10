@@ -51,8 +51,8 @@ def clean_2019(infile):
         return
     dfa = pd.read_csv(filepath, names=['rawstring'])
     sep_count = dfa['rawstring'].str.count(';').values
-    if sep_count[-1] < np.nanmedian(sep_count):
-        _log.warning(f"{infile} final line is incomplete. removing")
+    if sep_count[-1] != np.nanmedian(sep_count):
+        _log.warning(f"{infile} final line is incomplete or too long. removing")
         with open(infile) as fin:
             lines = fin.readlines()
         with open(infile, 'w') as fout:
