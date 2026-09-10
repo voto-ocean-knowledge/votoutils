@@ -1,13 +1,17 @@
+import datetime
 import numpy as np
 import polars as pl
 import xarray as xr
 import logging
 from pathlib import Path
 import subprocess
+import logging
 from votoutils.upload.sync_functions import sync_script_dir
 from votoutils.glider.process_pyglider_og1 import proc_pyglider_og1
 from votoutils.utilities.geocode import get_seas_merged_nav_nc
 from votoutils.utilities.utilities import encode_times
+from votoutils.utilities import database
+_log = logging.getLogger(__name__)
 
 
 def set_profile_numbers(ds):
@@ -123,6 +127,7 @@ def proc_one():
     add_voto_stuff(nc_out)
 
 def proc_all_nrt():
+    cutoff = datetime.datetime.now() - datetime.timedelta(days=7)
     logf = "/data/log/pyglider_og1.log"
     logging.basicConfig(
         filename=logf,
@@ -136,17 +141,26 @@ def proc_all_nrt():
     mission_yamls.sort()
 
     for yml_file in mission_yamls:
-        fn = yml_file.name
-        print(fn)
-        glider, mission = fn.split(".")[0].split('_M')
+        fn = yml_file.name.split('.')[0]
+        skips = ["SEA076_M9", "SEA076_M8", "SEA076_M48"]
+        if fn in skips:
+            _log.error(f"skip {fn} for now")
+            continue
+
+        mission_id = f'OG_nrt_{fn}'
+        last_proc = database.last_processed_time(mission_id)
+        if last_proc > cutoff:
+            _log.info(f'{mission_id} processed after cutoff, skipping')
+            continue
+        glider, mission = fn.split.split('_M')
         nc_out = proc_pyglider_og1(f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
                                    f"/data/data_l0_pyglider/OG_nrt/{glider}/M{mission}/",
                                    f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
-                                   'sub')
+                                   'sub', reprocess=True)
         if not nc_out:
             continue
         add_voto_stuff(nc_out)
-        print(nc_out)
+        database.update_processed_time(mission_id, datetime.datetime.now())
 
 
 def proc_all_delayed():
@@ -186,5 +200,5 @@ def proc_all_delayed():
 if __name__ == "__main__":
     #proc_one()
     #add_voto_stuff("/data/data_l0_pyglider/OG_nrt/SEA069/M48/timeseries/mission_timeseries_VOTO.nc")
-    #proc_all_nrt()
-    proc_all_delayed()
+    proc_all_nrt()
+    #proc_all_delayed()
