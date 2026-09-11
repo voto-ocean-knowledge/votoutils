@@ -6,6 +6,7 @@ import datetime
 import logging
 from pathlib import Path
 from pyglider import seaexplorer
+from packaging.version import parse as parse_version
 from votoutils.utilities.utilities import encode_times_og1
 from votoutils.glider.pre_process import clean_infiles
 from votoutils.glider.process_pyglider import safe_delete
@@ -41,6 +42,43 @@ def drop_derived_variables(ds):
     drop_vars = {'density', 'potential_density', 'potential_temperature', 'salinity', 'distance_over_ground'}.intersection(set(ds.data_vars))
     ds = ds.drop_vars(drop_vars)
     return ds
+
+def add_extra_delayed_vars(deployment):
+    if 'seanav' not in deployment['metadata'].keys():
+        return deployment
+    nav_string = deployment['metadata']['seanav'].split('-')[0].replace(' ', '')
+    nav_version = parse_version(nav_string)
+    if nav_version < parse_version('3.9.1'):
+        return deployment
+    extras = {
+        'ACC_X': {'source': 'AccX',
+                  'long_name': 'Acceleration measured along the X-axis',
+                  'units': 'ms-2', },
+        'ACC_Y': {'source': 'AccY',
+                  'long_name': 'Acceleration measured along the Y-axis',
+                  'units': 'ms-2',},
+        'ACC_Z': {'source': 'AccZ',
+                  'long_name': 'Acceleration measured along the Z-axis',
+                  'units': 'ms-2',},
+        'MAG_X': {'source': 'MagX',
+                  'long_name': 'Magnetic field component along the X-axis',
+                  'units': 'ms-2', },
+        'MAG_Y': {'source': 'MagY',
+                  'long_name': 'Magnetic field component along the Y-axis',
+                  'units': 'ms-2', },
+        'MAG_Z': {'source': 'MagZ',
+                  'long_name': 'Magnetic field component along the Z-axis',
+                  'units': 'ms-2', },
+         'DISTORTION': {'source': 'Distortion',
+                        'long_name': 'Measurement of magnetic distortion',
+                        'units': 'None',}
+    }
+    for key, val in extras.items():
+        extras[key]['coordinates'] = 'TIME, LONGITUDE, LATITUDE, DEPTH'
+        extras[key]['observation_type'] = 'measured'
+        extras[key]['sensor'] = 'SeaExplorer'
+    deployment['netcdf_variables'] =  deployment['netcdf_variables'] | extras
+    return deployment
 
 def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind, reprocess=False):
     og_date_format = "%Y%m%dT%H%M"
@@ -85,6 +123,8 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind, reprocess=False):
         else:
             new_var_dict[var_name] = deployment['netcdf_variables'][var_name]
     deployment['netcdf_variables'] = new_var_dict
+    if kind == 'raw':
+        deployment = add_extra_delayed_vars(deployment)
 
     deploymentyaml = str(Path(original_deploymentyaml).parent / Path(original_deploymentyaml).name.replace('.', '_pyglider_mod.'))
 
@@ -228,9 +268,9 @@ if __name__ == "__main__":
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    glider = "SEA045"
-    mission = 37
-    kind='sub'
+    glider = "SHW003"
+    mission = 14
+    kind='raw'
     if kind == 'raw':
         nc_out = proc_pyglider_og1(f"/data/data_raw/complete_mission/{glider}/M{mission}",
                                    f"/data/data_l0_pyglider/OG_complete_mission/{glider}/M{mission}/",
