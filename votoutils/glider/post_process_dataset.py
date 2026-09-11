@@ -1,6 +1,6 @@
 import numpy as np
 import re
-import datetime
+from packaging.version import parse as parse_version
 from votoutils.glider.post_process_optics import betasw_ZHH2009
 from votoutils.utilities.geocode import filter_territorial_data, nan_bad_locations, flag_bad_locations, locs_to_seas
 from votoutils.glider.post_process_ctd import (
@@ -189,9 +189,10 @@ def fix_specific_mission(ds):
     if 'legato4' in str(ds.attrs['ctd'].lower()):
         # The legato4 pressure sensor is not corrected for air pressure in early versions of pld software
         pld_string = ds.attrs['seapld']
-        pld_parts = pld_string.split('.')
-        pld_major_minor = float(f'{pld_parts[0]}.{pld_parts[1]}')
-        if pld_major_minor < 2.26:
+        pld_version = parse_version(pld_string.split('-')[0].replace(' ', ''))
+        legato4_fix_version = parse_version('2.26.1')
+
+        if pld_version < legato4_fix_version:
             ds['pressure'].values -= 10
             ds['depth'].values -= 10
             ds['pressure'].attrs['comment'] += 'manually corrected for air pressure offset'
