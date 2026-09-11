@@ -187,11 +187,15 @@ def hydrostatic_depth(ds):
 def fix_specific_mission(ds):
     platform_mission = (ds.attrs['platform_serial'], int(ds.attrs['deployment_id']))
     if 'legato4' in str(ds.attrs['ctd'].lower()):
-        # The legato4 pressure sensor is not corrected for air pressure
-        ds['pressure'].values -= 10
-        ds['depth'].values -= 10
-        ds['pressure'].attrs['comment'] += 'manually corrected for air pressure offset'
-        ds['depth'].attrs['comment'] += 'manually corrected for air pressure offset'
+        # The legato4 pressure sensor is not corrected for air pressure in early versions of pld software
+        pld_string = ds.attrs['seapld']
+        pld_parts = pld_string.split('.')
+        pld_major_minor = float(f'{pld_parts[0]}.{pld_parts[1]}')
+        if pld_major_minor < 2.26:
+            ds['pressure'].values -= 10
+            ds['depth'].values -= 10
+            ds['pressure'].attrs['comment'] += 'manually corrected for air pressure offset'
+            ds['depth'].attrs['comment'] += 'manually corrected for air pressure offset'
 
     match platform_mission:
 
