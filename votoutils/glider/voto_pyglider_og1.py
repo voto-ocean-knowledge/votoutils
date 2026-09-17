@@ -85,6 +85,8 @@ def add_voto_stuff(outname):
     attrs["data_url"] = f"https://erddap.observations.voiceoftheocean.org/erddap/tabledap/{attrs['dataset_id']}"
     attrs["variables"] = list(ds.variables)
     attrs["glider_serial"] = glider_serial
+    attrs['title'] = f'{dataset_id} {glider_serial}_M{deployment_id} {attrs["glider_name"]}'
+    attrs['institution'] = 'VOTO'
     ds.attrs = attrs
     outname_voto = f"{ds.attrs['id']}.nc"
     outpath_voto = out_path.parent / outname_voto
@@ -94,7 +96,8 @@ def add_voto_stuff(outname):
     ds.to_netcdf(outpath_voto)
     ds.close()
     out_path.unlink()
-    
+    mission_id = f'OG_{dataset_type}_{glider_serial}_M{deployment_id}'
+    database.update_processed_time(mission_id, datetime.datetime.now())
 
 
 def proc_one():
@@ -111,7 +114,7 @@ def proc_one():
     kind='nrt'
     if kind =='raw':
         nc_out = proc_pyglider_og1(f"/data/data_raw/complete_mission/{glider}/M{mission}/",
-                                   f"/data/data_l0_pyglider/OG_complete_mission/{glider}/M{mission}/",
+                                   f"/data/data_l0_pyglider/OG_delayed/{glider}/M{mission}/",
                                    f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
                                    'raw', reprocess=True)
     else:

@@ -7,7 +7,6 @@ import logging
 from pathlib import Path
 from pyglider import seaexplorer
 from packaging.version import parse as parse_version
-from votoutils.utilities.utilities import encode_times_og1
 from votoutils.glider.pre_process import clean_infiles
 from votoutils.glider.process_pyglider import safe_delete
 _log = logging.getLogger(__name__)
@@ -41,6 +40,19 @@ def convert_seaexplorer_phase(ds):
 def drop_derived_variables(ds):
     drop_vars = {'density', 'potential_density', 'potential_temperature', 'salinity', 'distance_over_ground'}.intersection(set(ds.data_vars))
     ds = ds.drop_vars(drop_vars)
+    return ds
+
+def optimise_dtypes(ds):
+    for var in ds.data_vars:
+        block_strings = ['LONGITUDE', 'LATITUDE', 'TIME']
+        for blocker in block_strings:
+            if blocker in var:
+                continue
+        if 'SENSOR' in var:
+            ds[var] = ds[var].astype('int8')
+
+        if ds[var].dtype == 'float64':
+            ds[var] = ds[var].astype('float32')
     return ds
 
 def add_extra_delayed_vars(deployment):
@@ -106,8 +118,6 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind, reprocess=False):
     if not reprocess and Path(l0tsdir).exists():
         _log.info(f"Will not reprocess {input_dir}")
         return
-    if reprocess:
-        safe_delete([l0tsdir, rawncdir])
     safe_delete([l0tsdir])
     clean_infiles(input_dir)
 
@@ -223,7 +233,7 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind, reprocess=False):
         },
     )
     ds["PLATFORM_SERIAL_NUMBER"] = xr.DataArray(
-        f"sea{ds.attrs['platform_serial_number'].zfill(3)}",
+        f"{ds.attrs['platform_serial_number'].zfill(3)}",
         attrs={"long_name": "glider serial number"},
     )
     ds["DEPLOYMENT_TIME"] = xr.DataArray(np.nanmin(ds.TIME.values), attrs = {
@@ -255,6 +265,7 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind, reprocess=False):
     ds.attrs["start_date"] = ts
     ds.attrs["date_created"] = dt_created
     ds.attrs['Conventions'] = deployment_original['metadata']['Conventions']
+    ds = optimise_dtypes(ds)
     ds.to_netcdf(outname)
     return outname
 
@@ -268,8 +279,8 @@ if __name__ == "__main__":
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    glider = "SHW003"
-    mission = 14
+    glider = "SHW002"
+    mission = 26
     kind='raw'
     if kind == 'raw':
         nc_out = proc_pyglider_og1(f"/data/data_raw/complete_mission/{glider}/M{mission}",
