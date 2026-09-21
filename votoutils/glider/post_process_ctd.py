@@ -125,7 +125,7 @@ def correct_rbr_lag(ds):
     sa = gsw.SA_from_SP(ds["salinity"], ds["pressure"], ds["longitude"], ds["latitude"])
     ct = gsw.CT_from_t(sa, ds["temperature"], ds["pressure"])
     ds["potential_density"].values = 1000 + gsw.density.sigma0(sa, ct)
-    ds["density"] = gsw.density.rho(ds.salinity, ds.temperature, ds.pressure)
+    ds["density"].values = gsw.density.rho(ds.salinity, ds.temperature, ds.pressure)
     rbr_str = (
         "Corrected following Thermal lag from Thermal Inertia of Conductivity Cells: Observations with a "
         "Sea-Bird Cell Rolf G. Lueck and James J. Picklo"
@@ -134,6 +134,7 @@ def correct_rbr_lag(ds):
         " (accepted). Static and dynamic performance of the RBRargo3 CTD."
         " Journal of Atmospheric and Oceanic Technology."
     )
+    ds["density"].attrs["comment"] = 'In-situ density. ' + rbr_str
     ds["temperature"].attrs["comment"] += rbr_str
     ds["salinity"].attrs["comment"] += rbr_str
     return ds
