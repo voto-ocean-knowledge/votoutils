@@ -14,7 +14,10 @@ _log = logging.getLogger(__name__)
 
 jammed_missions = [("SEA044", 106),
                   ("SEA067", 73),
-                  ("SEA063", 88),]
+                  ("SEA063", 88),
+                   ("SEA067", 86),
+                   ("SHW002", 26),
+                   ]
 
 def calculate_bbp(ds, beam_angle=117):
     # https://oceanobservatories.org/wp-content/uploads/2015/10/1341-00540_Data_Product_SPEC_FLUBSCT_OOI.pdf
