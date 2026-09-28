@@ -1,20 +1,22 @@
-import pandas as pd
-from pathlib import Path
 import datetime
 import json
 import logging
+from pathlib import Path
+
+import pandas as pd
+
 from votoutils.alerts.alarm_utils import (
-    setup_logger,
-    format_alarm,
-    secrets_dict,
     contact_pilot,
     contact_supervisor,
     find_previous_action,
-    parse_mrs,
+    format_alarm,
     mail_alarms_json,
-    parse_mail_alarms,
-    surfacing_alerts,
     mail_recipient,
+    parse_mail_alarms,
+    parse_mrs,
+    secrets_dict,
+    setup_logger,
+    surfacing_alerts,
 )
 from votoutils.utilities.utilities import mailer
 
@@ -26,7 +28,11 @@ class Dispatcher:
         self.platform_num = int(platform_id[-3:])
         self.platform_id = platform_id
         schedule = pd.read_csv(
-            "/data/log/schedule.csv", parse_dates=True, index_col=0, sep=";", dtype=str
+            "/data/log/schedule.csv",
+            parse_dates=True,
+            index_col=0,
+            sep=";",
+            dtype=str,
         )
         now = datetime.datetime.now()
         row = schedule[schedule.index < now].iloc[-1]
@@ -40,7 +46,10 @@ class Dispatcher:
         self.dummy_calls = False
         self.alarm_source = None
         setup_logger(
-            platform_id, self.alarm_log, formatter=format_alarm, level=logging.INFO
+            platform_id,
+            self.alarm_log,
+            formatter=format_alarm,
+            level=logging.INFO,
         )
 
     def load_alarm_log(self):
@@ -75,7 +84,7 @@ class Dispatcher:
             return False
         self.alarm_dict = df.iloc[-1].to_dict()
         if df.iloc[-1]["datetime"] < datetime.datetime.now() - datetime.timedelta(
-            hours=6
+            hours=6,
         ):
             _log.info(f"Stale log from {self.platform_id}")
             return False
@@ -92,7 +101,7 @@ class Dispatcher:
         ddict = self.alarm_dict
         if not ddict["alarm"]:
             _log.info(
-                f"Alarm cleared {self.platform_id} M{ddict['mission']} cycle {ddict['cycle']}"
+                f"Alarm cleared {self.platform_id} M{ddict['mission']} cycle {ddict['cycle']}",
             )
             return False
         self.alarm_source = "GLIMPSE comm log"
@@ -161,7 +170,7 @@ class Dispatcher:
 
         if "pilot" in previous_action:
             _log.warning(
-                f"Will we escalate? {df_action.iloc[-1].to_dict()['datetime']} "
+                f"Will we escalate? {df_action.iloc[-1].to_dict()['datetime']} ",
             )
             if df_action.iloc[-1].to_dict()[
                 "datetime"
@@ -186,13 +195,17 @@ if __name__ == "__main__":
             fail_count = int(fail_file.read_text())
     else:
         fail_count = 0
-        with open(fail_file, 'w') as fout:
+        with open(fail_file, "w") as fout:
             fout.write(str(fail_count))
     fail_count += 1
     if fail_count == 10:
-        mailer("failed-alerts", "automated alerts system has failed. Switch over to backup system e.g. IFTTT", mail_recipient)
+        mailer(
+            "failed-alerts",
+            "automated alerts system has failed. Switch over to backup system e.g. IFTTT",
+            mail_recipient,
+        )
     fail = False
-    with open(fail_file, 'w') as fout:
+    with open(fail_file, "w") as fout:
         fout.write(str(fail_count))
     try:
         parse_mail_alarms()
@@ -229,7 +242,7 @@ if __name__ == "__main__":
         fail = True
     if not fail:
         fail_count = 0
-    with open(fail_file, 'w') as fout:
+    with open(fail_file, "w") as fout:
         fout.write(str(fail_count))
 
     _log.info("******** COMPLETE CHECK *********")

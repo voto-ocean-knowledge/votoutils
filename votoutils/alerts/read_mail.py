@@ -1,9 +1,9 @@
 import email
 import imaplib
+import json
+import logging
 from datetime import datetime
 from pathlib import Path
-import logging
-import json
 
 _log = logging.getLogger(__name__)
 script_dir = Path(__file__).parent.parent.parent.absolute()
@@ -17,8 +17,8 @@ def read_email_from_gmail(call_func):
     timefile = Path("lastcheck.txt")
     if timefile.exists():
         with open(timefile, "r") as variable_file:
-            for line in variable_file.readlines():
-                last_check = datetime.fromisoformat((line.strip()))
+            for line in variable_file:
+                last_check = datetime.fromisoformat(line.strip())
     else:
         last_check = datetime(1970, 1, 1)
     # Write the time of this run

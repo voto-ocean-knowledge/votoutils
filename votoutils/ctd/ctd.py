@@ -1,14 +1,18 @@
-import pandas as pd
-import xarray as xr
-from pathlib import Path
 import datetime
-import gsw
-from seabird.cnv import fCNV
-from votoutils.utilities.utilities import mailer
-from votoutils.qc.flag_qartod import flag_ioos, ioos_qc
 import logging
+
 # because the seabird cnv library screws with the logger
 from importlib import reload
+from pathlib import Path
+
+import gsw
+import pandas as pd
+import xarray as xr
+from seabird.cnv import fCNV
+
+from votoutils.qc.flag_qartod import flag_ioos, ioos_qc
+from votoutils.utilities.utilities import mailer
+
 logging.shutdown()
 reload(logging)
 _log = logging.getLogger(__name__)
@@ -201,7 +205,7 @@ def read_ctd(ctd_csv, locfile):
                 if "-" in line:
                     sep = "-"
             if "StartTime" in line:
-                start_str = line.split('=')[1].replace('\n', '')
+                start_str = line.split("=")[1].replace("\n", "")
                 start_time = datetime.datetime.strptime(start_str, "%Y/%m/%d %H:%M:%S")
 
             if line[:4] == "Date":
@@ -214,7 +218,7 @@ def read_ctd(ctd_csv, locfile):
                 skips = i + 1
                 df = pd.read_csv(ctd_csv, skiprows=skips, index_col=False)
                 if "Measurement Date/Time" in list(df):
-                    df = df[df["Measurement Date/Time"] != 'Error']
+                    df = df[df["Measurement Date/Time"] != "Error"]
                     df["datetime"] = pd.to_datetime(
                         df["Measurement Date/Time"],
                         format=f"%Y{sep}%m{sep}%d %H:%M:%S",
@@ -249,7 +253,7 @@ def read_ctd(ctd_csv, locfile):
             },
         )
     for col in list(df):
-        if col in clean_names.keys():
+        if col in clean_names:
             df = df.rename(columns={col: clean_names[col]})
     df = df[list(set(list(attrs_dict.keys()) + ["TIME"]).intersection(set(list(df))))]
     df["TIME"] = df.TIME.astype("datetime64[ns]")
@@ -272,7 +276,7 @@ def load_cnv_file(ctd_csv):
     if "DO [μmol/L]" not in list(df):
         df["DO [μmol/L]"] = df["oxygen_ml_L"] * 22.39244
     for col in list(df):
-        if col in clean_names.keys():
+        if col in clean_names:
             df = df.rename(columns={col: clean_names[col]})
 
     df = df[list(set(list(attrs_dict.keys()) + ["TIME"]).intersection(set(list(df))))]
@@ -299,7 +303,7 @@ def ds_from_df(df):
     ds["time"] = ("time", df["TIME"], time_attr)
 
     for col_name in list(df):
-        if col_name in attrs_dict.keys():
+        if col_name in attrs_dict:
             ds[col_name] = ("time", df[col_name], attrs_dict[col_name])
     ds["cast_no"] = ds.cast_number
     ds.attrs = attrs

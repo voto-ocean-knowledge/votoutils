@@ -1,11 +1,14 @@
 import datetime
+import logging
+
 import gsw
 import numpy as np
 import pandas as pd
 import pynmea2
 import xarray as xr
-import logging
+
 from votoutils.utilities import utilities, vocabularies
+
 _log = logging.getLogger(__name__)
 
 
@@ -33,17 +36,18 @@ def get_attrs(ds, platform_serial_number, postscript="delayed"):
 
 
 clean_names_nrt = {
-     'Lat': 'LATITUDE',
-     'Long': 'LONGITUDE',
-     'RBRL_T': 'TEMP',
-     'RBRL_C': 'CNDC',
-     'RBRL_Sal': 'PSAL',
+    "Lat": "LATITUDE",
+    "Long": "LONGITUDE",
+    "RBRL_T": "TEMP",
+    "RBRL_C": "CNDC",
+    "RBRL_Sal": "PSAL",
 }
+
 
 def add_sensors(ds, sensors):
     for sensor_id, serial_dict in sensors.items():
-        make_model = serial_dict['make_model']
-        if make_model in ['Sailbuoy datalogger', 'Sailbuoy autopilot']:
+        make_model = serial_dict["make_model"]
+        if make_model in ["Sailbuoy datalogger", "Sailbuoy autopilot"]:
             continue
         if make_model not in vocabularies.sailbuoy_sensors_vocabs.keys():
             _log.warning(f"could not find sensor {make_model} in vocabs dict. Skipping")
@@ -63,17 +67,19 @@ def parse_nbosi(input_dir, output_dir):
     conductivity = []
     sample_time = []
     with open(input_dir / "NBOSI.TXT") as infile:
-        for line in infile.readlines():
+        for line in infile:
             if "Sensorlog opened" in line:
                 dt = datetime.datetime.strptime(line[17:36], "%d.%m.%Y %H:%M:%S")
             try:
-                temp, cond, sample_num = line.replace('\n', '').split(' ')
+                temp, cond, sample_num = line.replace("\n", "").split(" ")
                 temperature.append(float(temp))
                 conductivity.append(float(cond))
-                sample_time.append(dt + datetime.timedelta(0,int(sample_num)/10))
+                sample_time.append(dt + datetime.timedelta(0, int(sample_num) / 10))
             except:
                 continue
-    df = pd.DataFrame({'datetime': sample_time, 'CNDC': conductivity, 'TEMP': temperature})
+    df = pd.DataFrame(
+        {"datetime": sample_time, "CNDC": conductivity, "TEMP": temperature},
+    )
     df = df.set_index("datetime").sort_index()
     out_dir = output_dir
     if not out_dir.exists():
@@ -87,45 +93,47 @@ def parse_aanderaa_ctd(input_dir, output_dir):
     conductivity = []
     sample_time = []
     with open(input_dir / "AADICOND.TXT", encoding="latin") as infile:
-        for line in infile.readlines():
+        for line in infile:
             if "Sensorlog opened" in line:
                 dt = datetime.datetime.strptime(line[17:36], "%d.%m.%Y %H:%M:%S")
-            if 'MEASUREMENT' in line:
+            if "MEASUREMENT" in line:
                 try:
-                    __, __, __, __, cond,__, temp = line.replace('\n', '').split('\t')
+                    __, __, __, __, cond, __, temp = line.replace("\n", "").split("\t")
                     temperature.append(float(temp))
                     conductivity.append(float(cond))
                     sample_time.append(dt)
                 except:
                     continue
-    df = pd.DataFrame({'datetime': sample_time, 'CNDC': conductivity, 'TEMP': temperature})
+    df = pd.DataFrame(
+        {"datetime": sample_time, "CNDC": conductivity, "TEMP": temperature},
+    )
     df = df.set_index("datetime").sort_index()
     out_dir = output_dir
     if not out_dir.exists():
         out_dir.mkdir()
     df.to_parquet(out_dir / "AADICOND.pqt")
 
+
 def parse_aanderaa_adcp(input_dir, output_dir):
     dt = datetime.datetime(1970, 1, 1)
     dicts = []
     measurement_dict = {}
     with open(input_dir / "DCPS.TXT") as infile:
-        for line in infile.readlines():
-
+        for line in infile:
             if "Sensorlog opened" in line:
                 dt = datetime.datetime.strptime(line[17:36], "%d.%m.%Y %H:%M:%S")
 
-            if 'MEASUREMENT' in line:
+            if "MEASUREMENT" in line:
                 if measurement_dict:
                     dicts.append(measurement_dict)
-                parts = line.replace('\n','').split('\t')[3:]
+                parts = line.replace("\n", "").split("\t")[3:]
                 if len(parts) % 2 == 1:
                     parts = parts[:-1]
                 keys = parts[::2]
                 values = parts[1::2]
-                measurement_dict = {key:val for key, val in zip(keys, values)}
-                measurement_dict['datetime'] = dt
-            if line[:4] == 'Cell':
+                measurement_dict = {key: val for key, val in zip(keys, values)}
+                measurement_dict["datetime"] = dt
+            if line[:4] == "Cell":
                 parts = line.split()
                 cell_num = parts[1]
                 u = parts[-3]
@@ -147,7 +155,7 @@ def parse_airmar(input_dir, output_dir):
     dt = datetime.datetime(1970, 1, 1)
     messages = {}
     with open(input_dir / "AIRMAR.TXT", encoding="latin") as infile:
-        for line in infile.readlines():
+        for line in infile:
             if "Sensorlog opened" in line:
                 dt = datetime.datetime.strptime(line[-20:-1], "%d.%m.%Y %H:%M:%S")
             try:
@@ -167,18 +175,18 @@ def parse_airmar(input_dir, output_dir):
                         int(timestamp[2:4]),
                         int(timestamp[4:6]),
                     )
-            talker = line.split(",")[0].replace('$', '').replace(' ', '')
+            talker = line.split(",")[0].replace("$", "").replace(" ", "")
             if not talker.isprintable():
                 continue
             if talker == "WIXDR":
                 talker += line.split(",")[1]
             elif talker == "WIMWV":
                 talker += line.split(",")[2]
-            elif talker =="YXXDR" and "RAT" in line:
+            elif talker == "YXXDR" and "RAT" in line:
                 talker += "A_RATE"
             elif talker == "YXXDR":
-                talker += f'_{line.split(",")[1]}'
-            if talker not in messages.keys():
+                talker += f"_{line.split(',')[1]}"
+            if talker not in messages:
                 messages[talker] = []
             messages[talker].append(f"{dt},{line}")
     nmea_dir = output_dir / "AIRMAR"
@@ -191,34 +199,107 @@ def parse_airmar(input_dir, output_dir):
             outfile.writelines(lines)
     df_merged = pd.DataFrame()
     talker_fields_dicts = {
-        "GPGGA": ["datetime", "talker", "timestamp", "lat_str", "northing_sign", "lon_str", "easting_sign", "d",
-                  "n", "e", "f", "g", "m", "i", "j", "k", "l", ],
-        "GPVTG": ["datetime", "talker", "track_degrees_true", "T", "track_degrees_magnetic", "M",
-                  "track_speed_knots", "a", "b", "c", "d"],
+        "GPGGA": [
+            "datetime",
+            "talker",
+            "timestamp",
+            "lat_str",
+            "northing_sign",
+            "lon_str",
+            "easting_sign",
+            "d",
+            "n",
+            "e",
+            "f",
+            "g",
+            "m",
+            "i",
+            "j",
+            "k",
+            "l",
+        ],
+        "GPVTG": [
+            "datetime",
+            "talker",
+            "track_degrees_true",
+            "T",
+            "track_degrees_magnetic",
+            "M",
+            "track_speed_knots",
+            "a",
+            "b",
+            "c",
+            "d",
+        ],
         "TIROT": ["datetime", "talker", "rate_of_turn_degrees_per_minute", "a", "b"],
-        "WIMDA": ["datetime", "talker", "a", "b", "air_pressure_bar", "c", "air_temperature_celcius", "d",
-                  "water_temperature_c", "e", "relative_humidity_%", "absolute_humidity_%", "h", "i",
-                  "wind_direction_true_degrees", "j", "wind_direction_magnetic_degrees", "k", "l", "m",
-                  "wind_speed_m_s", "n", "o"],
-        "WIMWVR": ["datetime", "talker", "wind_angle_relative", "b", "wind_speed", "wind_speed_units", "e"],
-        "YXXDR_A": ["datetime", "talker", "a", "pitch_degrees", "b", "c", "d", "roll_degrees", "e", "f"],
+        "WIMDA": [
+            "datetime",
+            "talker",
+            "a",
+            "b",
+            "air_pressure_bar",
+            "c",
+            "air_temperature_celcius",
+            "d",
+            "water_temperature_c",
+            "e",
+            "relative_humidity_%",
+            "absolute_humidity_%",
+            "h",
+            "i",
+            "wind_direction_true_degrees",
+            "j",
+            "wind_direction_magnetic_degrees",
+            "k",
+            "l",
+            "m",
+            "wind_speed_m_s",
+            "n",
+            "o",
+        ],
+        "WIMWVR": [
+            "datetime",
+            "talker",
+            "wind_angle_relative",
+            "b",
+            "wind_speed",
+            "wind_speed_units",
+            "e",
+        ],
+        "YXXDR_A": [
+            "datetime",
+            "talker",
+            "a",
+            "pitch_degrees",
+            "b",
+            "c",
+            "d",
+            "roll_degrees",
+            "e",
+            "f",
+        ],
     }
     for talker_file in nmea_dir.glob("*.txt"):
-        talker = talker_file.name.split('.')[0]
-        if talker not in talker_fields_dicts.keys():
+        talker = talker_file.name.split(".")[0]
+        if talker not in talker_fields_dicts:
             continue
         names = talker_fields_dicts[talker]
         df = pd.read_csv(talker_file, names=names, parse_dates=["datetime"])
-        keep_names = [name for name in names if len(name) > 1 and name not in ["talker"]]
+        keep_names = [
+            name for name in names if len(name) > 1 and name not in ["talker"]
+        ]
         df = df[keep_names]
         if talker == "GPGGA":
             lat_sign = np.ones(len(df.lat_str))
-            lat_sign[df['northing_sign'] == 'S'] = -1
-            df['LATITUDE'] = coord_to_decimal(df['lat_str'].astype(float)) * lat_sign
+            lat_sign[df["northing_sign"] == "S"] = -1
+            df["LATITUDE"] = coord_to_decimal(df["lat_str"].astype(float)) * lat_sign
             lon_sign = np.ones(len(df.lon_str))
-            lon_sign[df['easting_sign'] == 'W'] = -1
-            df['LONGITUDE'] = coord_to_decimal(df['lon_str'].astype(float)) * lon_sign
-            df = df.drop(['lon_str', 'lat_str', "northing_sign", "easting_sign"], axis=1)
+            lon_sign[df["easting_sign"] == "W"] = -1
+            df["LONGITUDE"] = coord_to_decimal(df["lon_str"].astype(float)) * lon_sign
+            df = df.drop(
+                ["lon_str", "lat_str", "northing_sign", "easting_sign"],
+                axis=1,
+            )
         df = df.set_index("datetime").sort_index()
         if df_merged.empty:
             df_merged = df
@@ -228,9 +309,9 @@ def parse_airmar(input_dir, output_dir):
             df,
             left_index=True,
             right_index=True,
-            tolerance=datetime.timedelta(0, 5)
+            tolerance=datetime.timedelta(0, 5),
         )
-    df_merged.to_parquet(output_dir/ "AIRMAR.pqt")
+    df_merged.to_parquet(output_dir / "AIRMAR.pqt")
 
 
 def coord_to_decimal(coord_in):
@@ -251,18 +332,18 @@ def parse_data(data_dir, output_dir):
     file_in = data_dir / "DATA.TXT"
     data_lines = []
     with open(file_in) as fin:
-        for line in fin.readlines():
+        for line in fin:
             if line[:4] == "Time":
                 data_lines.append(line)
     dicts_list = []
     for line in data_lines:
         data_dict = {}
-        line = line.replace(' ', '').replace('\n', '')
-        items = line.split(',')
+        line = line.replace(" ", "").replace("\n", "")
+        items = line.split(",")
         for item in items:
-            if '=' not in item:
+            if "=" not in item:
                 continue
-            key, val = item.split('=')
+            key, val = item.split("=")
             if val == "NULL":
                 val = ""
             if val:
@@ -270,7 +351,7 @@ def parse_data(data_dir, output_dir):
         dicts_list.append(data_dict)
     df = pd.DataFrame(dicts_list)
     df["datetime"] = pd.to_datetime(df.Time, format="%d.%m.%Y%H:%M:%S")
-    df = df.drop(['Time'], axis=1)
+    df = df.drop(["Time"], axis=1)
     df = df.set_index("datetime").sort_index()
 
     clean_names_data = {
@@ -288,7 +369,7 @@ def parse_data(data_dir, output_dir):
         "RelativeHumidity": "HUMIDITY",
     }
     df = df.rename(clean_names_data, axis=1)
-    df= df[list(set(df.columns).intersection(set(clean_names_data.values())))]
+    df = df[list(set(df.columns).intersection(set(clean_names_data.values())))]
     df.to_parquet(output_dir / "Data_logger.pqt")
 
 
@@ -364,13 +445,19 @@ def parse_nrt(auto_dir, output_dir):
         )
         mose_nrt.to_parquet(output_dir / "mose_nrt.pqt")
     df_nrt = data.join(auto, how="outer", lsuffix="_x", rsuffix="_y")
-    vars_to_merge = [var_name[:-2] for var_name in list(df_nrt) if var_name[-2:] == '_x']
+    vars_to_merge = [
+        var_name[:-2] for var_name in list(df_nrt) if var_name[-2:] == "_x"
+    ]
     for var_base in vars_to_merge:
         _log.info(f"merging {var_base}")
-        df_nrt.loc[np.isnan(df_nrt[var_base + '_x'].astype(float)), var_base + '_x'] = df_nrt.loc[
-            np.isnan(df_nrt[var_base + '_x'].astype(float)), var_base + '_y'].astype(float)
-        df_nrt = df_nrt.rename({var_base + '_x': var_base}, axis=1)
-        df_nrt = df_nrt.drop([var_base + '_y'], axis=1)
+        df_nrt.loc[np.isnan(df_nrt[var_base + "_x"].astype(float)), var_base + "_x"] = (
+            df_nrt.loc[
+                np.isnan(df_nrt[var_base + "_x"].astype(float)),
+                var_base + "_y",
+            ].astype(float)
+        )
+        df_nrt = df_nrt.rename({var_base + "_x": var_base}, axis=1)
+        df_nrt = df_nrt.drop([var_base + "_y"], axis=1)
         df_nrt[var_base] = df_nrt[var_base].astype(float)
 
     clean_names_auto = {
@@ -378,9 +465,10 @@ def parse_nrt(auto_dir, output_dir):
         "Long": "LONGITUDE",
     }
     df_nrt = df_nrt.rename(clean_names_auto, axis=1)
-    df_nrt = df_nrt[list(set(df_nrt.columns).intersection(set(clean_names_auto.values())))]
-    
-    
+    df_nrt = df_nrt[
+        list(set(df_nrt.columns).intersection(set(clean_names_auto.values())))
+    ]
+
     df_nrt.to_parquet(output_dir / "Auto_pilot.pqt")
 
 
@@ -394,32 +482,42 @@ def parse_legato(input_dir, intermediate_dir):
     ctd_datetime = None
     datetime_diff = None
     with open(infile_logger, encoding="latin") as infile:
-        for line in infile.readlines():
+        for line in infile:
             if logger_datetime and ctd_datetime:
                 datetime_diff = logger_datetime - ctd_datetime
-                _log.info(f"datetime difference between logger and legato: {datetime_diff}")
+                _log.info(
+                    f"datetime difference between logger and legato: {datetime_diff}",
+                )
                 break
             if "Sensorlog opened" in line:
                 line_parts = line.split(" opened ")
                 time_string = line_parts[1][:19]
-                logger_datetime = datetime.datetime.strptime(time_string, "%d.%m.%Y %H:%M:%S")
+                logger_datetime = datetime.datetime.strptime(
+                    time_string,
+                    "%d.%m.%Y %H:%M:%S",
+                )
             if line[:2] == "20":
                 line_parts = line.split(",")
                 time_string = line_parts[0][:19]
-                ctd_datetime = datetime.datetime.strptime(time_string, "%Y-%m-%d %H:%M:%S")
+                ctd_datetime = datetime.datetime.strptime(
+                    time_string,
+                    "%Y-%m-%d %H:%M:%S",
+                )
     if not datetime_diff:
         _log.error(f"Could not match legato datestamps for {input_dir}")
         return
     ds = xr.open_dataset(infile_rsk)
     if datetime_diff > datetime.timedelta(seconds=5):
         _log.info("Correcting legato timestamps")
-        ds['time'] = ds['time'] + (np.datetime64(logger_datetime, 'ns') - np.datetime64(ctd_datetime, 'ns'))
-    ds = ds.drop_dims('parameters')
+        ds["time"] = ds["time"] + (
+            np.datetime64(logger_datetime, "ns") - np.datetime64(ctd_datetime, "ns")
+        )
+    ds = ds.drop_dims("parameters")
     legato_dict = {
-        'conductivity': 'CNDC',
-        'temperature': 'TEMP',
-        'salinity': 'PSAL',
-        'pressure': 'PRES'
+        "conductivity": "CNDC",
+        "temperature": "TEMP",
+        "salinity": "PSAL",
+        "pressure": "PRES",
     }
     ds = ds.rename(legato_dict)
     ds = ds[list(legato_dict.values())]
@@ -439,7 +537,7 @@ def parse_gmx560(input_dir, output_dir):
         "WIXDRA": [],
     }
     with open(input_dir / "GMX560.TXT", encoding="latin") as infile:
-        for line in infile.readlines():
+        for line in infile:
             if "Sensorlog opened" in line:
                 dt = datetime.datetime.strptime(line[-20:-1], "%d.%m.%Y %H:%M:%S")
             try:
@@ -505,7 +603,7 @@ def parse_gmx560(input_dir, output_dir):
         ["wind_direction_true", "windspeed_true"]
     ]
     df_heading = pd.read_csv(
-        gmx_dir /"WIHDM.txt",
+        gmx_dir / "WIHDM.txt",
         names=["datetime", "talker", "heading_magnetic", " magnetic", "checksum"],
         parse_dates=["datetime"],
     ).set_index("datetime")
@@ -606,7 +704,9 @@ def parse_gmx560(input_dir, output_dir):
         df_tilt,
     ]:
         df_add = df_add.sort_index().rename(gmx_name_dict, axis=1)
-        df_add = df_add[list(set(df_add.columns).intersection(set(gmx_name_dict.values())))]
+        df_add = df_add[
+            list(set(df_add.columns).intersection(set(gmx_name_dict.values())))
+        ]
         if df_add.empty:
             continue
         if df_gmx.empty:
@@ -620,7 +720,7 @@ def parse_gmx560(input_dir, output_dir):
             direction="nearest",
             tolerance=pd.Timedelta("1s"),
         )
-    df_gmx.to_parquet(output_dir /"MAXIMET.pqt")
+    df_gmx.to_parquet(output_dir / "MAXIMET.pqt")
 
 
 def parse_mose(indir, intermediate_dir):
@@ -630,7 +730,7 @@ def parse_mose(indir, intermediate_dir):
     with open(indir / "MOSE.TXT", encoding="latin") as infile:
         with open(mose_dir / "mose_good.txt", "w") as outfile:
             with open(mose_dir / "mose_loc.txt", "w") as locfile:
-                for line in infile.readlines():
+                for line in infile:
                     try:
                         msg = pynmea2.parse(line, check=True)
                         if msg.data[1] == "MOT" and msg.data[3] != "80":
@@ -713,7 +813,9 @@ def parse_mose(indir, intermediate_dir):
         "west_m": "westward_displacement",
     }
     df_mose = df_mose.rename(clean_names_mose, axis=1)
-    df_mose = df_mose[list(set(df_mose.columns).intersection(set(clean_names_mose.values())))]
+    df_mose = df_mose[
+        list(set(df_mose.columns).intersection(set(clean_names_mose.values())))
+    ]
     df_mose.to_parquet(intermediate_dir / "MOSE.pqt")
 
 
@@ -783,10 +885,10 @@ def export_netcdf(output_dir, yml_dict):
     ds = xr.Dataset()
     time_attr = {"name": "time"}
     ds["time"] = ("time", df.index, time_attr)
-    platform_serial = yml_dict['metadata']['platform_serial']
+    platform_serial = yml_dict["metadata"]["platform_serial"]
     if platform_serial == "SB2017":
         _log.info("adding fake pressure for NBOSI")
-        df['PRES'] = 0
+        df["PRES"] = 0
 
     for col_name in list(df):
         try:
@@ -798,23 +900,27 @@ def export_netcdf(output_dir, yml_dict):
             continue
 
         ds[col_name] = ("time", values, vocabularies.vocab_attrs[col_name])
-    if {'PRES', 'TEMP', 'CNDC'}.issubset(list(ds)):
-        ds["PSAL"] = ("time",
-                      gsw.SP_from_C(ds.CNDC.values, ds.TEMP.values, ds.PRES.values),
-                      vocabularies.vocab_attrs["PSAL"],
-                      )
+    if {"PRES", "TEMP", "CNDC"}.issubset(list(ds)):
+        ds["PSAL"] = (
+            "time",
+            gsw.SP_from_C(ds.CNDC.values, ds.TEMP.values, ds.PRES.values),
+            vocabularies.vocab_attrs["PSAL"],
+        )
     ds = get_attrs(ds, platform_serial)
-    ds = add_sensors(ds, yml_dict['devices'])
+    ds = add_sensors(ds, yml_dict["devices"])
     ds.attrs["variables"] = list(ds.variables)
     ds["trajectory"] = xr.DataArray(1, attrs={"cf_role": "trajectory_id"})
     outfile = output_dir / f"{ds.attrs['id']}.nc"
     ds.to_netcdf(outfile)
-    _log.info(f'Wrote nc out to {outfile}')
+    _log.info(f"Wrote nc out to {outfile}")
     for var_name in ds.variables:
-        if var_name in ["trajectory", 'time']:
+        if var_name in ["trajectory", "time"]:
             continue
         good = len(ds[var_name][~np.isnan(ds[var_name])])
-        _log.info(f"non nan values for {var_name}: {round(100 * good / len(ds[var_name]), 2)} %")
+        _log.info(
+            f"non nan values for {var_name}: {round(100 * good / len(ds[var_name]), 2)} %",
+        )
+
 
 def merge_intermediate(intermediate_dir, output_dir):
     input_files = intermediate_dir.glob("*.pqt")
@@ -828,15 +934,21 @@ def merge_intermediate(intermediate_dir, output_dir):
             df,
             left_index=True,
             right_index=True,
-            how='outer'
+            how="outer",
         )
-        vars_to_merge = [var_name[:-2] for var_name in list(df_merged) if var_name[-2:] == '_x']
+        vars_to_merge = [
+            var_name[:-2] for var_name in list(df_merged) if var_name[-2:] == "_x"
+        ]
         for var_base in vars_to_merge:
             _log.info(f"merging {var_base}")
-            df_merged.loc[np.isnan(df_merged[var_base + '_x'].astype(float)), var_base + '_x'] = df_merged.loc[
-                np.isnan(df_merged[var_base + '_x'].astype(float)), var_base + '_y'].astype(float)
-            df_merged = df_merged.rename({var_base + '_x': var_base}, axis=1)
-            df_merged = df_merged.drop([var_base + '_y'], axis=1)
+            df_merged.loc[
+                np.isnan(df_merged[var_base + "_x"].astype(float)),
+                var_base + "_x",
+            ] = df_merged.loc[
+                np.isnan(df_merged[var_base + "_x"].astype(float)),
+                var_base + "_y",
+            ].astype(float)
+            df_merged = df_merged.rename({var_base + "_x": var_base}, axis=1)
+            df_merged = df_merged.drop([var_base + "_y"], axis=1)
             df_merged[var_base] = df_merged[var_base].astype(float)
     df_merged.to_parquet(output_dir / "delayed.pqt")
-

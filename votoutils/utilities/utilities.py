@@ -1,17 +1,19 @@
+import datetime
+import logging
 import re
+import subprocess
+
 import numpy as np
 import pandas as pd
-import logging
-import subprocess
-import datetime
+
 from votoutils.upload.sync_functions import sync_script_dir
 
 _log = logging.getLogger(__name__)
 
 
 def natural_sort(unsorted_list):
-    convert = lambda text: int(text) if text.isdigit() else text.lower()  # noqa: E731
-    alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", key)]  # noqa: E731
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", key)]
     return sorted(unsorted_list, key=alphanum_key)
 
 
@@ -53,10 +55,10 @@ def match_input_files(gli_infiles, pld_infiles):
 
 
 def encode_times(ds):
-    if 'N_MEASUREMENTS' in ds.dims:
-        time_unit = 'TIME'
+    if "N_MEASUREMENTS" in ds.dims:
+        time_unit = "TIME"
     else:
-        time_unit = 'time'
+        time_unit = "time"
     if "units" in ds[time_unit].attrs.keys():
         ds[time_unit].attrs.pop("units")
     if "calendar" in ds[time_unit].attrs.keys():
@@ -107,7 +109,7 @@ def find_best_dtype(var_name, da):
 
 
 def set_fill_value(new_dtype):
-    fill_val = 2 ** (int(re.findall("\d+", str(new_dtype))[0]) - 1) - 1
+    fill_val = 2 ** (int(re.findall(r"\d+", str(new_dtype))[0]) - 1) - 1
     return fill_val
 
 
@@ -224,11 +226,12 @@ def add_standard_global_attrs(ds):
         ds.attrs[key] = val
     return ds
 
+
 platforms_no_proc = ["SEA057"]
 missions_no_proc = [
-                    ("SEA057", 51),
-                    ("SEA057", 75),
-                    ("SEA070", 29),
-                    ("SEA056", 22),
-                    ("SEA055", 81),
-                    ]
+    ("SEA057", 51),
+    ("SEA057", 75),
+    ("SEA070", 29),
+    ("SEA056", 22),
+    ("SEA055", 81),
+]

@@ -1,17 +1,23 @@
-import os
-import sys
-import pathlib
 import argparse
-import numpy as np
-import logging
-import glob
-import pandas as pd
 import datetime
-import subprocess
+import glob
+import logging
+import os
+import pathlib
 import shutil
-from votoutils.utilities.utilities import natural_sort, match_input_files, missions_no_proc
+import subprocess
+import sys
+
+import numpy as np
+import pandas as pd
+
 from votoutils.glider.process_pyglider import proc_pyglider_l0
 from votoutils.upload.sync_functions import sync_script_dir
+from votoutils.utilities.utilities import (
+    match_input_files,
+    missions_no_proc,
+    natural_sort,
+)
 
 script_dir = pathlib.Path(__file__).parent.parent.absolute()
 parent_dir = script_dir.parents[0]
@@ -21,14 +27,12 @@ os.chdir(script_dir)
 _log = logging.getLogger(__name__)
 
 
-
 def remove_proc_files(platform_serial, mission):
     rawnc_dir = pathlib.Path(
         f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}/rawnc",
     )
     if rawnc_dir.exists():
         shutil.rmtree(rawnc_dir)
-    return
 
 
 def update_processing_time(platform_serial, mission, start):
@@ -36,7 +40,12 @@ def update_processing_time(platform_serial, mission, start):
         "/home/pipeline/reprocess.csv",
         parse_dates=["proc_time"],
     )
-    a = [np.logical_and(df_reprocess.glider == platform_serial, df_reprocess.mission == mission)]
+    a = [
+        np.logical_and(
+            df_reprocess.glider == platform_serial,
+            df_reprocess.mission == mission,
+        ),
+    ]
     if df_reprocess.index[tuple(a)].any():
         ind = df_reprocess.index[tuple(a)].values[0]
         df_reprocess.at[ind, "proc_time"] = datetime.datetime.now()
@@ -59,12 +68,14 @@ def update_processing_time(platform_serial, mission, start):
 
 def process(platform_serial, mission):
     if (platform_serial, mission) in missions_no_proc:
-        _log.info(f"Will not process {platform_serial}, M{mission} as it is in missions_no_proc")
+        _log.info(
+            f"Will not process {platform_serial}, M{mission} as it is in missions_no_proc",
+        )
         return
     if len(platform_serial) < 4:
         platform_serial = f"SEA{platform_serial}"
 
-    logf = f"/data/log/complete_mission/{platform_serial}_M{str(mission)}.log"
+    logf = f"/data/log/complete_mission/{platform_serial}_M{mission!s}.log"
     logging.basicConfig(
         filename=logf,
         filemode="w",
@@ -76,7 +87,9 @@ def process(platform_serial, mission):
     input_dir = f"/data/data_raw/complete_mission/{platform_serial}/M{mission}/"
     if not input_dir:
         raise ValueError(f"Input dir {input_dir} not found")
-    output_dir = f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}/"
+    output_dir = (
+        f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}/"
+    )
 
     in_files_gli = natural_sort(glob.glob(f"{input_dir}*gli*.gz"))
     in_files_pld = natural_sort(glob.glob(f"{input_dir}*pld1.raw*.gz"))
@@ -89,11 +102,13 @@ def process(platform_serial, mission):
     _log.info(f"Finished processing glider{platform_serial} mission {mission}")
     sys.path.append(str(parent_dir / "voto-web/voto/bin"))
     # noinspection PyUnresolvedReferences
-    from add_profiles import init_db, add_complete_profiles
+    from add_profiles import add_complete_profiles, init_db
 
     init_db()
     add_complete_profiles(
-        pathlib.Path(f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}"),
+        pathlib.Path(
+            f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}",
+        ),
     )
     _log.info("Finished add to database")
 
@@ -102,6 +117,7 @@ def process(platform_serial, mission):
     sys.path.append(str(parent_dir / "quick-plots"))
     # noinspection PyUnresolvedReferences
     from complete_mission_plots import complete_plots
+
     complete_plots(platform_serial, mission)
     _log.info("Finished plot creation")
 

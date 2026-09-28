@@ -1,8 +1,10 @@
-import xarray as xr
-from votoutils.glider.convert_to_og1 import convert_to_og1, standardise_og10
 import subprocess
 from pathlib import Path
+
 import requests
+import xarray as xr
+
+from votoutils.glider.convert_to_og1 import convert_to_og1, standardise_og10
 
 
 def lots():
@@ -64,10 +66,10 @@ def single():
     # ds = xr.open_dataset("/data/data_l0_pyglider/complete_mission/SEA76/M19/timeseries/mission_timeseries.nc")
     # ds = xr.open_dataset("/data/data_l0_pyglider/complete_mission/SEA55/M31/timeseries/mission_timeseries.nc")
     ds = xr.open_dataset(
-        "/data/data_l0_pyglider/complete_mission/SEA45/M79/timeseries/mission_timeseries.nc"
+        "/data/data_l0_pyglider/complete_mission/SEA45/M79/timeseries/mission_timeseries.nc",
     )
     ds = ds.sel(
-        time=slice(ds.time.values[459416], ds.time.values[470647])
+        time=slice(ds.time.values[459416], ds.time.values[470647]),
     )  #     ds = ds.sel(time=slice(ds.time.values[439416], ds.time.values[470647]))
     # ds = xr.open_dataset("/data/data_l0_pyglider/nrt/SEA55/M31/timeseries/mission_timeseries.nc")
     # ds = xr.open_dataset(

@@ -6,14 +6,16 @@ Replace "al.mp3" with a path to an audio track of your choice for the alarm soun
 Recommend running as a cron job at a regular interval
 """
 
-from gtts import gTTS
 import json
-from pydub import AudioSegment
-from pydub.playback import play
-from pathlib import Path
+import logging
 import os
 import sys
-import logging
+from pathlib import Path
+
+from gtts import gTTS
+from pydub import AudioSegment
+from pydub.playback import play
+
 from votoutils.alerts.read_mail import read_email_from_gmail
 
 _log = logging.getLogger(__name__)

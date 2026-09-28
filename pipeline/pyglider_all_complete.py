@@ -1,10 +1,12 @@
-import os
-import sys
-import pathlib
-import logging
 import datetime
-from votoutils.utilities.utilities import missions_no_proc
+import logging
+import os
+import pathlib
+import sys
+
 from pyglider_single_mission import process
+
+from votoutils.utilities.utilities import missions_no_proc
 
 script_dir = pathlib.Path(__file__).parent.absolute()
 sys.path.append(str(script_dir))
@@ -20,7 +22,7 @@ logging.basicConfig(
 )
 
 
-def proc_all_complete(reprocess=True, min_date=datetime.datetime(2026,1,5)):
+def proc_all_complete(reprocess=True, min_date=datetime.datetime(2026, 1, 5)):
     _log.info("Start complete reprocessing")
     yml_files = list(pathlib.Path("/data/deployment_yaml/mission_yaml").glob("*.yml"))
     yml_files.sort()
@@ -43,7 +45,9 @@ def proc_all_complete(reprocess=True, min_date=datetime.datetime(2026,1,5)):
                 f"{platform_serial} M{mission} does not have raw alseamar raw files. skipping",
             )
             continue
-        output_dir = pathlib.Path(f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}/")
+        output_dir = pathlib.Path(
+            f"/data/data_l0_pyglider/complete_mission/{platform_serial}/M{mission}/",
+        )
         mission_file = output_dir / "mission_timeseries.nc"
         if mission_file.exists() and not reprocess:
             _log.info(f"Will not reprocess {platform_serial} M{mission}")
@@ -51,7 +55,9 @@ def proc_all_complete(reprocess=True, min_date=datetime.datetime(2026,1,5)):
         if mission_file.exists():
             mtime = datetime.datetime.fromtimestamp(mission_file.lstat().st_mtime)
             if mtime > min_date:
-                _log.info(f"Will not reprocess {platform_serial} M{mission}, last processed {mtime}")
+                _log.info(
+                    f"Will not reprocess {platform_serial} M{mission}, last processed {mtime}",
+                )
                 continue
         _log.info(f"Reprocessing {platform_serial} M{mission}")
         process(platform_serial, mission)

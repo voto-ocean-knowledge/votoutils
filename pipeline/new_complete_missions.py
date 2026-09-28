@@ -1,10 +1,12 @@
 import datetime
-import pathlib
-import pandas as pd
-import numpy as np
 import logging
+import pathlib
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 from pyglider_single_mission import process
+
 from votoutils.utilities.utilities import missions_no_proc
 
 _log = logging.getLogger(__name__)
@@ -37,7 +39,9 @@ def main():
         )
         df_reprocess.to_csv("/home/pipeline/reprocess.csv", index=False)
     _log.info(f"start length {len(df_reprocess)}")
-    glider_paths = list(pathlib.Path("/data/data_raw/complete_mission").glob("SEA*")) + list(pathlib.Path("/data/data_raw/complete_mission").glob("SHW*"))
+    glider_paths = list(
+        pathlib.Path("/data/data_raw/complete_mission").glob("SEA*"),
+    ) + list(pathlib.Path("/data/data_raw/complete_mission").glob("SHW*"))
     glider_paths_good = []
     for path in glider_paths:
         mission_paths = path.glob("M*")

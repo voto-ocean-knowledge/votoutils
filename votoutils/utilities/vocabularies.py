@@ -638,68 +638,74 @@ sailbuoy_sensors_vocabs = {
         "sensor_model_vocabulary": "http://vocab.nerc.ac.uk/collection/L22/current/TOOL2250/",
         "long_name": "Nortek AD2CP",
     },
-
 }
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import yaml
+
     sensor_vocabs_clean = {}
     for key, val in sensor_vocabs.items():
         for entry_key, entry_val in val.items():
-            val[entry_key] = entry_val.replace('https:', 'http:')
-        sensor_vocabs_clean[val['sensor_model']] = val
+            val[entry_key] = entry_val.replace("https:", "http:")
+        sensor_vocabs_clean[val["sensor_model"]] = val
 
-
-    with open("/home/callum/Documents/community/ocean-gliders-format-vocabularies/yaml/draft_yaml/voto_sensors.yaml", "w") as fin:
+    with open(
+        "/home/callum/Documents/community/ocean-gliders-format-vocabularies/yaml/draft_yaml/voto_sensors.yaml",
+        "w",
+    ) as fin:
         yaml.dump(sensor_vocabs_clean, fin, width=120)
 
     variables_clean = {}
     glider_vars = [
- 'AD2CP_TIME',
- 'DOXY',
- 'CHLA',
- 'CNDC',
- 'PRES',
- 'PSAL',
- 'TEMP',
- 'THETA',
- 'DENSITY',
- 'PHASE',
- 'PRES_ADCP',
- 'BBP700',
- 'RBBP700',
- 'ED380',
- 'ED490',
- 'DPAR',
- 'PITCH',
- 'ROLL',
- 'HEADING',
- 'AD2CP_PITCH',
- 'AD2CP_ROLL',
- 'AD2CP_HEADING',
- 'TEMP_OXYGEN',
- 'POTDENS0',
- 'FLUOCHLA',
- 'TURB',
- 'TCPUCHLA',
- 'CDOM',
- 'FLUOCDOM',
- 'PHYC',
- 'FLUOPHYC',
- 'PHYCOCYANIN',
- 'EPSIFY01',
- 'EPSIFY02',]
+        "AD2CP_TIME",
+        "DOXY",
+        "CHLA",
+        "CNDC",
+        "PRES",
+        "PSAL",
+        "TEMP",
+        "THETA",
+        "DENSITY",
+        "PHASE",
+        "PRES_ADCP",
+        "BBP700",
+        "RBBP700",
+        "ED380",
+        "ED490",
+        "DPAR",
+        "PITCH",
+        "ROLL",
+        "HEADING",
+        "AD2CP_PITCH",
+        "AD2CP_ROLL",
+        "AD2CP_HEADING",
+        "TEMP_OXYGEN",
+        "POTDENS0",
+        "FLUOCHLA",
+        "TURB",
+        "TCPUCHLA",
+        "CDOM",
+        "FLUOCDOM",
+        "PHYC",
+        "FLUOPHYC",
+        "PHYCOCYANIN",
+        "EPSIFY01",
+        "EPSIFY02",
+    ]
     for key, val in vocab_attrs.items():
         if key not in glider_vars:
             continue
-        if 'sensor' in val.keys():
-           val.pop('sensor')
-        if 'vocabulary' not in val.keys():
+        if "sensor" in val.keys():
+            val.pop("sensor")
+        if "vocabulary" not in val.keys():
             continue
         for entry_key, entry_val in val.items():
             if type(entry_val) is str:
-                val[entry_key] = entry_val.replace('https:', 'http:')
+                val[entry_key] = entry_val.replace("https:", "http:")
         variables_clean[key] = val
-    with open("/home/callum/Documents/community/ocean-gliders-format-vocabularies/yaml/draft_yaml/voto_variables.yaml", "w") as fin:
+    with open(
+        "/home/callum/Documents/community/ocean-gliders-format-vocabularies/yaml/draft_yaml/voto_variables.yaml",
+        "w",
+    ) as fin:
         yaml.dump(variables_clean, fin, width=120)

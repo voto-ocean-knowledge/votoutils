@@ -1,7 +1,9 @@
-import pathlib
-import pandas as pd
 import logging
+import pathlib
 import subprocess
+
+import pandas as pd
+
 from votoutils.upload.sync_functions import sync_script_dir
 
 _log = logging.getLogger(__name__)

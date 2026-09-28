@@ -1,35 +1,48 @@
-from pathlib import Path
 import logging
+from pathlib import Path
+
 import yaml
+
 _log = logging.getLogger(__name__)
 
-from votoutils.sailbuoy.sailbuoy_functions import parse_nbosi, \
-    parse_airmar, parse_data, parse_nrt, parse_legato, parse_gmx560, parse_mose, \
-    export_netcdf, merge_intermediate, parse_aanderaa_ctd, parse_aanderaa_adcp
+from votoutils.sailbuoy.sailbuoy_functions import (
+    export_netcdf,
+    merge_intermediate,
+    parse_aanderaa_adcp,
+    parse_aanderaa_ctd,
+    parse_airmar,
+    parse_data,
+    parse_gmx560,
+    parse_legato,
+    parse_mose,
+    parse_nbosi,
+    parse_nrt,
+)
 
 sensor_to_dir = {
-    'RBR legato CTD': 'LEGATO',
-    'Neil Brown 100': 'NBOSI',
-    'Aanderaa 4319A': 'AADICOND',
-    'Aanderaa DCPS 5400': 'DCPS',
-    'Gill Instruments GMX560': 'MAXIMET',
-    'Airmar 200WX': 'AIRMAR',
-    'Datawell MOSE-G1000': 'MOSE',
-    'Sailbuoy autopilot': 'Auto_pilot',
-    'Sailbuoy datalogger': 'Data_logger'
+    "RBR legato CTD": "LEGATO",
+    "Neil Brown 100": "NBOSI",
+    "Aanderaa 4319A": "AADICOND",
+    "Aanderaa DCPS 5400": "DCPS",
+    "Gill Instruments GMX560": "MAXIMET",
+    "Airmar 200WX": "AIRMAR",
+    "Datawell MOSE-G1000": "MOSE",
+    "Sailbuoy autopilot": "Auto_pilot",
+    "Sailbuoy datalogger": "Data_logger",
 }
 
 sensor_to_function = {
-    'RBR legato CTD': parse_legato,
-    'Neil Brown 100': parse_nbosi,
-    'Aanderaa 4319A': parse_aanderaa_ctd,
-    'Aanderaa DCPS 5400': parse_aanderaa_adcp,
-    'Gill Instruments GMX560': parse_gmx560,
-    'Airmar 200WX': parse_airmar,
-    'Datawell MOSE-G1000': parse_mose,
-    'Sailbuoy autopilot': parse_nrt,
-    'Sailbuoy datalogger': parse_data
+    "RBR legato CTD": parse_legato,
+    "Neil Brown 100": parse_nbosi,
+    "Aanderaa 4319A": parse_aanderaa_ctd,
+    "Aanderaa DCPS 5400": parse_aanderaa_adcp,
+    "Gill Instruments GMX560": parse_gmx560,
+    "Airmar 200WX": parse_airmar,
+    "Datawell MOSE-G1000": parse_mose,
+    "Sailbuoy autopilot": parse_nrt,
+    "Sailbuoy datalogger": parse_data,
 }
+
 
 class Sailbuoy:
     def __init__(self, input_dir=".", base_dir=".", yaml_path="."):
@@ -48,14 +61,18 @@ class Sailbuoy:
             self.intermediate_dir.mkdir(parents=True)
         with open(self.yaml_path) as fin:
             self.config = yaml.safe_load(fin)
-        self.platform_serial =  self.config['metadata']['platform_serial']
-        expected_sensors = list(sensor['make_model'] for sensor in self.config['devices'].values())
+        self.platform_serial = self.config["metadata"]["platform_serial"]
+        expected_sensors = list(
+            sensor["make_model"] for sensor in self.config["devices"].values()
+        )
         expected_dirs = {sensor_to_dir[sensor] for sensor in expected_sensors}
-        input_dirs = {path.name for path in self.input_dir.glob('*')}
-        ignore_dirs = {'Metadata', 'Track'}
+        input_dirs = {path.name for path in self.input_dir.glob("*")}
+        ignore_dirs = {"Metadata", "Track"}
         process_dirs = input_dirs - ignore_dirs
         if not process_dirs == expected_dirs:
-            _log.error(f"Expected dirs {expected_dirs}, found {process_dirs} in {self.input_dir}")
+            _log.error(
+                f"Expected dirs {expected_dirs}, found {process_dirs} in {self.input_dir}",
+            )
         self.sensors_to_process = expected_sensors
         _log.info(f"Will process data from {expected_sensors}")
 
@@ -68,7 +85,9 @@ class Sailbuoy:
                 continue
             outfile = self.intermediate_dir / f"{sensor_dir}.pqt"
             if outfile.exists() and not self.reprocess_raw:
-                _log.info(f"{sensor}: {sensor_dir} already processed as {outfile}, skipping")
+                _log.info(
+                    f"{sensor}: {sensor_dir} already processed as {outfile}, skipping",
+                )
                 continue
             _log.info(f"Process {sensor}")
             proc_function(self.input_dir / sensor_dir, self.intermediate_dir)
@@ -86,6 +105,7 @@ class Sailbuoy:
         self.merge_intermediate()
         self.export_netcdf()
 
+
 if __name__ == "__main__":
     logging.basicConfig(
         filename="/data/log/sailbuoy_delayed.log",
@@ -94,24 +114,24 @@ if __name__ == "__main__":
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    id=2121
-    if id==2017:
+    id = 2121
+    if id == 2017:
         sb = Sailbuoy(
             "/mnt/samba/43_Hudson Bay Sailbuoy 2/3_Non_Processed/SB2017/SB2017_M7",
             "/home/callum/Downloads/tmpsb/SB2017/M7",
-            "/home/callum/Documents/data-flow/raw-to-nc/deployment-yaml/sailbuoy_yaml/SB2017_M7.yml"
+            "/home/callum/Documents/data-flow/raw-to-nc/deployment-yaml/sailbuoy_yaml/SB2017_M7.yml",
         )
-    elif id==2121:
+    elif id == 2121:
         sb = Sailbuoy(
             "/mnt/samba/45_SkaMix/3_Non_Processed/SB2121/SB2121_M2",
             "/home/callum/Downloads/tmp_new/SB2121/M2",
-            "/home/callum/Documents/data-flow/raw-to-nc/deployment-yaml/sailbuoy_yaml/SB2121_M2.yml"
+            "/home/callum/Documents/data-flow/raw-to-nc/deployment-yaml/sailbuoy_yaml/SB2121_M2.yml",
         )
         sb.platform_serial = "SB2121"
     else:
         sb = Sailbuoy(
             "/mnt/samba/35_Windwake/3_Non_Processed/SB2120/SB2120_M3",
             "/home/callum/Downloads/tmpsb/SB2120/M3",
-                    "/home/callum/Documents/data-flow/raw-to-nc/deployment-yaml/sailbuoy_yaml/SB2120_M3.yml"
+            "/home/callum/Documents/data-flow/raw-to-nc/deployment-yaml/sailbuoy_yaml/SB2120_M3.yml",
         )
     sb.process()

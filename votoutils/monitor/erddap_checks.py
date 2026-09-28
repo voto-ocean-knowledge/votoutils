@@ -1,18 +1,20 @@
+import datetime
+import logging
+
+import geopandas as gp
 import httpx
 import numpy as np
-import datetime
-from erddapy import ERDDAP
-import geopandas as gp
 import pandas as pd
+from erddapy import ERDDAP
+
 from votoutils.utilities.utilities import mailer
-import logging
 
 _log = logging.getLogger(__name__)
 
 
 def enough_datasets(df_datasets):
     _log.info("Check enough datasets")
-    total = int(len(df_datasets))
+    total = len(df_datasets)
     nrt = int(sum(df_datasets.index.str[:3] == "nrt"))
     complete = int(sum(df_datasets.index.str[:3] == "del"))
 
@@ -52,11 +54,17 @@ def nrt_vs_complete(df_datasets):
     df_nrt = df_datasets[df_datasets.mission_type == "nrt"]
     df_nrt.index = df_nrt.glider + "_M" + df_nrt.mission.astype(str)
     df_delayed = df_datasets[df_datasets.mission_type == "delayed"]
-    df_delayed.index = (
-        df_delayed.glider + "_M" + df_delayed.mission.astype(str)
-    )
+    df_delayed.index = df_delayed.glider + "_M" + df_delayed.mission.astype(str)
 
-    expected_fails = ["SEA061_M63", "SEA067_M15", "SEA066_M45", "SEA057_M75", "SEA070_M29", "SEA078_M43", "SHW001_M34"]
+    expected_fails = [
+        "SEA061_M63",
+        "SEA067_M15",
+        "SEA066_M45",
+        "SEA057_M75",
+        "SEA070_M29",
+        "SEA078_M43",
+        "SHW001_M34",
+    ]
     for this_dataset in df_nrt.index:
         if this_dataset in expected_fails:
             continue
@@ -172,20 +180,24 @@ def unit_check(e, dataset_id):
 
 def adcp_dataset_check(df):
     meta = pd.read_csv(
-        "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/meta_users_table.csvp"
+        "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/meta_users_table.csvp",
     )
     adcp = pd.read_csv(
-        "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/ad2cp.csvp"
+        "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/ad2cp.csvp",
     )
     adcp_proc = pd.read_csv(
-        "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/gliderad2cp_files.csvp"
+        "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/gliderad2cp_files.csvp",
     )
     meta_with_adcp = meta[meta["available_variables"].str.contains("ad2cp_pressure")]
     delayed_missions = df.index[df.index.str[:9] == "delayed_S"].str[8:].values
     missions_with_adcp = meta_with_adcp["datasetID"].str[4:].values
     expected_adcp_missions = set(delayed_missions).intersection(missions_with_adcp)
     adcp_files = set(adcp.name.str.split(".", expand=True)[0].values)
-    proc_adcp_files =  set(adcp_proc.name.str.split(".", expand=True)[0].str.split('_adcp_', expand=True)[0].values)
+    proc_adcp_files = set(
+        adcp_proc.name.str.split(".", expand=True)[0]
+        .str.split("_adcp_", expand=True)[0]
+        .values,
+    )
     missing_adcp = expected_adcp_missions.difference(adcp_files)
     missing_proc_adcp = expected_adcp_missions.difference(proc_adcp_files)
     expected_missing_adcp = ["SEA066_M16"]
@@ -194,7 +206,10 @@ def adcp_dataset_check(df):
         mailer("cherddap", f"missing expected adcp files {bad_missing_adcp}")
     bad_missing_proc_adcp = missing_proc_adcp.difference(expected_missing_adcp)
     if len(bad_missing_adcp) > 0:
-        mailer("cherddap", f"missing expected processed adcp files {bad_missing_proc_adcp}")
+        mailer(
+            "cherddap",
+            f"missing expected processed adcp files {bad_missing_proc_adcp}",
+        )
 
 
 def international_waters_check(e, dataset_id):
@@ -271,7 +286,7 @@ def datasets_to_emodnet(df_datasets):
         df_datasets = df_datasets[df_datasets.datasetID.str.contains("VOTO")]
         df_datasets = df_datasets[df_datasets.datasetID.str.contains("SEA")]
         if len(df_datasets) == 0:
-            msg = f"No datasets on emodnet!"
+            msg = "No datasets on emodnet!"
             mailer("cherddap", msg)
             return
         df_datasets["voto_datasetid"] = df_datasets.datasetID.str[5:]
@@ -328,7 +343,12 @@ def main():
     # drop the allDatasets row and make the datasetID the index for easier reading
     df_datasets.set_index("datasetID", inplace=True)
     df_datasets.drop("allDatasets", inplace=True)
-    df_datasets = df_datasets[np.logical_or(df_datasets.index.str.contains("SEA"), df_datasets.index.str.contains("SHW"))]
+    df_datasets = df_datasets[
+        np.logical_or(
+            df_datasets.index.str.contains("SEA"),
+            df_datasets.index.str.contains("SHW"),
+        )
+    ]
     df_datasets = df_datasets[~df_datasets.index.str.contains("OG")]
     adcp_dataset_check(df_datasets)
     enough_datasets(df_datasets)
@@ -336,7 +356,7 @@ def main():
     try:
         datasets_to_emodnet(df_datasets)
     except:
-        mailer('cherddap', 'emodnet check failed')
+        mailer("cherddap", "emodnet check failed")
     bad_depths(df_datasets)
     bad_dataset_id(df_datasets)
     delayed = df_datasets.index[df_datasets.index.str[:3] == "del"]

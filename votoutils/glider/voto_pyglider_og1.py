@@ -1,15 +1,18 @@
 import datetime
+import logging
+import subprocess
+from pathlib import Path
+
 import numpy as np
 import polars as pl
 import xarray as xr
-import logging
-from pathlib import Path
-import subprocess
-from votoutils.upload.sync_functions import sync_script_dir
+
 from votoutils.glider.process_pyglider_og1 import proc_pyglider_og1
+from votoutils.upload.sync_functions import sync_script_dir
+from votoutils.utilities import database
 from votoutils.utilities.geocode import get_seas_merged_nav_nc
 from votoutils.utilities.utilities import encode_times
-from votoutils.utilities import database
+
 _log = logging.getLogger(__name__)
 
 
@@ -24,9 +27,7 @@ def set_profile_numbers(ds):
         if np.isnan(df_dive.PRES).all():
             deep_inflect = df_dive.index[int(len(df_dive) / 2)]
         else:
-            deep_inflect = df_dive[
-                df_dive.PRES== df_dive.PRES.max()
-            ].index.values[0]
+            deep_inflect = df_dive[df_dive.PRES == df_dive.PRES.max()].index.values[0]
         deepest_points.append(deep_inflect)
 
     previous_deep_inflect = deepest_points[0]
@@ -39,7 +40,7 @@ def set_profile_numbers(ds):
             shallow_inflect = df_deep_to_deep.index[int(len(df_deep_to_deep) / 2)]
         else:
             shallow_inflect = df_deep_to_deep[
-                df_deep_to_deep.PRES== df_deep_to_deep.PRES.min()
+                df_deep_to_deep.PRES == df_deep_to_deep.PRES.min()
             ].index.values[0]
         df.loc[previous_deep_inflect:shallow_inflect, "profile_index"] = num * 2
         df.loc[shallow_inflect:deep_inflect, "profile_index"] = num * 2 + 1
@@ -52,9 +53,17 @@ def set_profile_numbers(ds):
     ds["PROFILE_DIRECTION"] = df.DIVE_NUMBER.copy()
     ds["PROFILE_NUMBER"].values = df.profile_index
     ds["PROFILE_DIRECTION"].values = df.profile_direction
-    ds["PROFILE_NUMBER"].attrs = dict(long_name="profile number", units="1", sources="PRES, TIME, DIVE_NUMBER")
-    ds["PROFILE_DIRECTION"].attrs = {"long_name": "profile direction", "units": "1",
-                                     "sources": "PRES, TIME, DIVE_NUMBER", "comment": "-1 = ascending, 1 = descending"}
+    ds["PROFILE_NUMBER"].attrs = dict(
+        long_name="profile number",
+        units="1",
+        sources="PRES, TIME, DIVE_NUMBER",
+    )
+    ds["PROFILE_DIRECTION"].attrs = {
+        "long_name": "profile direction",
+        "units": "1",
+        "sources": "PRES, TIME, DIVE_NUMBER",
+        "comment": "-1 = ascending, 1 = descending",
+    }
     return ds
 
 
@@ -65,7 +74,7 @@ def add_voto_stuff(outname):
     attrs = ds.attrs
     # OG1 VOTO specific
     timeseries_dir = out_path.parent
-    rawncdir = timeseries_dir.parent / 'rawnc'
+    rawncdir = timeseries_dir.parent / "rawnc"
     nav_nc = list(rawncdir.glob("*rawgli.parquet"))[0]
     ds = set_profile_numbers(ds)
     basin = get_seas_merged_nav_nc(nav_nc)
@@ -75,28 +84,30 @@ def add_voto_stuff(outname):
     df = pl.read_parquet(pld_nc)
     total_dives = df.select("fnum").unique().shape[0]
     attrs["total_dives"] = total_dives
-    dataset_type = "nrt" if 'nrt' in str(outname) else "delayed"
-    glider_serial = ds.attrs['platform_serial_number']
-    deployment_id = ds.attrs['deployment_id']
-    dataset_id = (
-        f"{dataset_type}_{glider_serial}_M{deployment_id}"
-    )
+    dataset_type = "nrt" if "nrt" in str(outname) else "delayed"
+    glider_serial = ds.attrs["platform_serial_number"]
+    deployment_id = ds.attrs["deployment_id"]
+    dataset_id = f"{dataset_type}_{glider_serial}_M{deployment_id}"
     attrs["dataset_id"] = dataset_id
-    attrs["data_url"] = f"https://erddap.observations.voiceoftheocean.org/erddap/tabledap/{attrs['dataset_id']}"
+    attrs["data_url"] = (
+        f"https://erddap.observations.voiceoftheocean.org/erddap/tabledap/{attrs['dataset_id']}"
+    )
     attrs["variables"] = list(ds.variables)
     attrs["glider_serial"] = glider_serial
-    attrs['title'] = f'{dataset_id} {glider_serial}_M{deployment_id} {attrs["glider_name"]}'
-    attrs['institution'] = 'VOTO'
+    attrs["title"] = (
+        f"{dataset_id} {glider_serial}_M{deployment_id} {attrs['glider_name']}"
+    )
+    attrs["institution"] = "VOTO"
     ds.attrs = attrs
     outname_voto = f"{ds.attrs['id']}.nc"
     outpath_voto = out_path.parent / outname_voto
-    drop_vars = {'profile_index', 'profile_direction'}.intersection(set(ds.data_vars))
+    drop_vars = {"profile_index", "profile_direction"}.intersection(set(ds.data_vars))
     ds = ds.drop_vars(drop_vars)
     ds = encode_times(ds)
     ds.to_netcdf(outpath_voto)
     ds.close()
     out_path.unlink()
-    mission_id = f'OG_{dataset_type}_{glider_serial}_M{deployment_id}'
+    mission_id = f"OG_{dataset_type}_{glider_serial}_M{deployment_id}"
     database.update_processed_time(mission_id, datetime.datetime.now())
 
 
@@ -109,26 +120,32 @@ def proc_one():
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    glider="SEA045"
+    glider = "SEA045"
     mission = 37
-    kind='nrt'
-    if kind =='raw':
-        nc_out = proc_pyglider_og1(f"/data/data_raw/complete_mission/{glider}/M{mission}/",
-                                   f"/data/data_l0_pyglider/OG_delayed/{glider}/M{mission}/",
-                                   f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
-                                   'raw', reprocess=True)
+    kind = "nrt"
+    if kind == "raw":
+        nc_out = proc_pyglider_og1(
+            f"/data/data_raw/complete_mission/{glider}/M{mission}/",
+            f"/data/data_l0_pyglider/OG_delayed/{glider}/M{mission}/",
+            f"/data/deployment_yaml/og1/{glider}_M{mission!s}.yaml",
+            "raw",
+            reprocess=True,
+        )
     else:
-
-        nc_out = proc_pyglider_og1(f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
-                                   f"/data/data_l0_pyglider/OG_nrt/{glider}/M{mission}/",
-                                   #f"/data/deployment_yaml/mission_yaml/OG_{glider}_M{str(mission)}.yml",
-                                   f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
-                                   'sub', reprocess=True)
+        nc_out = proc_pyglider_og1(
+            f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
+            f"/data/data_l0_pyglider/OG_nrt/{glider}/M{mission}/",
+            # f"/data/deployment_yaml/mission_yaml/OG_{glider}_M{str(mission)}.yml",
+            f"/data/deployment_yaml/og1/{glider}_M{mission!s}.yaml",
+            "sub",
+            reprocess=True,
+        )
     if not nc_out:
         return
     add_voto_stuff(nc_out)
 
-def proc_all(kind='nrt'):
+
+def proc_all(kind="nrt"):
     cutoff = datetime.datetime.now() - datetime.timedelta(days=7)
     logf = f"/data/log/{kind}_pyglider_og1.log"
     logging.basicConfig(
@@ -143,31 +160,34 @@ def proc_all(kind='nrt'):
     mission_yamls.sort()
 
     for yml_file in mission_yamls:
-        fn = yml_file.name.split('.')[0]
+        fn = yml_file.name.split(".")[0]
         skips = ["SEA076_M9", "SEA076_M8", "SEA076_M48"]
         if fn in skips:
             _log.error(f"skip {fn} for now")
             continue
 
-        mission_id = f'OG_{kind}_{fn}'
+        mission_id = f"OG_{kind}_{fn}"
         last_proc = database.last_processed_time(mission_id)
         if last_proc > cutoff:
-            _log.info(f'{mission_id} processed after cutoff, skipping')
+            _log.info(f"{mission_id} processed after cutoff, skipping")
             continue
-        glider, mission = fn.split('_M')
-        pyglider_kind = 'sub' if kind=='nrt' else 'raw'
-        if kind == 'nrt':
+        glider, mission = fn.split("_M")
+        pyglider_kind = "sub" if kind == "nrt" else "raw"
+        if kind == "nrt":
             indir = f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv"
         else:
             indir = f"/data/data_raw/complete_mission/{glider}/M{mission}"
-        nc_out = proc_pyglider_og1(indir,
-                                   f"/data/data_l0_pyglider/OG_{kind}/{glider}/M{mission}/",
-                                   f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
-                                   pyglider_kind, reprocess=True)
+        nc_out = proc_pyglider_og1(
+            indir,
+            f"/data/data_l0_pyglider/OG_{kind}/{glider}/M{mission}/",
+            f"/data/deployment_yaml/og1/{glider}_M{mission!s}.yaml",
+            pyglider_kind,
+            reprocess=True,
+        )
         if not nc_out:
             continue
         add_voto_stuff(nc_out)
-        if kind=='delayed':
+        if kind == "delayed":
             subprocess.check_call(
                 [
                     "/usr/bin/bash",
@@ -180,6 +200,6 @@ def proc_all(kind='nrt'):
 
 
 if __name__ == "__main__":
-    #proc_one()
-    #add_voto_stuff("/data/data_l0_pyglider/OG_nrt/SEA069/M48/timeseries/mission_timeseries_VOTO.nc")
+    # proc_one()
+    # add_voto_stuff("/data/data_l0_pyglider/OG_nrt/SEA069/M48/timeseries/mission_timeseries_VOTO.nc")
     proc_all()

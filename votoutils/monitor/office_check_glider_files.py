@@ -1,42 +1,45 @@
-from pathlib import Path
-import pandas as pd
-from itertools import chain
 import subprocess
-from votoutils.utilities.utilities import mailer
-from votoutils.upload.sync_functions import sync_script_dir
+from itertools import chain
+from pathlib import Path
 
-explained_missions = [('SEA067', 15),
- ('SEA061', 63),
- ('SEA056', 27),
- ('SEA066', 31),
- ('SEA045', 58),
- ('SEA061', 48),
- ('SEA045', 37),
- ('SEA045', 54),
- ('SEA044', 48),
- ('SEA055', 16),
- ('SEA063', 40),
- ('SEA066', 45),
- ('SEA045', 74),
- ('SEA066', 50),
- ('SEA055', 81),
- ('SEA044', 23),
- ('SEA056', 22),
- ('SEA044', 43),
- ('SEA068', 45),
- ('SEA079', 38),
- ('SEA078', 43),
- ('SEA069', 67),
-                      ]
+import pandas as pd
+
+from votoutils.upload.sync_functions import sync_script_dir
+from votoutils.utilities.utilities import mailer
+
+explained_missions = [
+    ("SEA067", 15),
+    ("SEA061", 63),
+    ("SEA056", 27),
+    ("SEA066", 31),
+    ("SEA045", 58),
+    ("SEA061", 48),
+    ("SEA045", 37),
+    ("SEA045", 54),
+    ("SEA044", 48),
+    ("SEA055", 16),
+    ("SEA063", 40),
+    ("SEA066", 45),
+    ("SEA045", 74),
+    ("SEA066", 50),
+    ("SEA055", 81),
+    ("SEA044", 23),
+    ("SEA056", 22),
+    ("SEA044", 43),
+    ("SEA068", 45),
+    ("SEA079", 38),
+    ("SEA078", 43),
+    ("SEA069", 67),
+]
 
 expected_missmatch = (
     ("SEA055", 87),
     ("SEA056", 107),
-    ("SHW002", 26)
-                      )
+    ("SHW002", 26),
+)
 
 expected_bad_download_dir = (
-    Path('/mnt/samba/01_SAT_Missions/1_Downloaded/SEA061_PLD078/20220310'),
+    Path("/mnt/samba/01_SAT_Missions/1_Downloaded/SEA061_PLD078/20220310"),
 )
 
 skip_projects = [
@@ -71,7 +74,8 @@ def good_mission(
     download_mission_path,
     processed_missions,
     explained=(),
-    upload_script=sync_script_dir / "upload.sh"):
+    upload_script=sync_script_dir / "upload.sh",
+):
     if "XXX" in str(download_mission_path):
         return
     parts = list(download_mission_path.parts)
@@ -131,7 +135,7 @@ def good_mission(
                     str(platform_serial),
                     str(mission),
                     str(mission_path),
-                    str(nav_dir)
+                    str(nav_dir),
                 ],
             )
             msg = f"uploaded raw data for {pretty_mission}"
@@ -163,7 +167,9 @@ def list_missions(to_skip=()):
                     if skip in str(non_proc):
                         print(f"skipping {skip}")
                         continue
-                proj_glider_dirs =  list(non_proc.glob("SEA*")) + list(non_proc.glob("SHW*"))
+                proj_glider_dirs = list(non_proc.glob("SEA*")) + list(
+                    non_proc.glob("SHW*"),
+                )
                 glider_dirs.append(list(proj_glider_dirs))
 
     glider_dirs = list(chain(*glider_dirs))
@@ -172,7 +178,9 @@ def list_missions(to_skip=()):
     for glider_dir in glider_dirs:
         mission_dirs = list(glider_dir.glob("S*"))
         all_dirs = list(glider_dir.glob("*"))
-        all_dirs = [directory for directory in all_dirs if "DS_Store" not in str(directory)]
+        all_dirs = [
+            directory for directory in all_dirs if "DS_Store" not in str(directory)
+        ]
         all_dirs = set(all_dirs).difference(expected_bad_download_dir)
         difference = set(all_dirs).difference(mission_dirs)
         if difference:

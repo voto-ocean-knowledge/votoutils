@@ -1,10 +1,11 @@
-import polars as pl
+import datetime
+import glob
+import logging
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-import datetime
-import logging
-import glob
-from pathlib import Path
+import polars as pl
 
 _log = logging.getLogger(__name__)
 
@@ -14,7 +15,12 @@ def clean_2019(infile):
     if ".gli." not in infile and ".pld1." not in infile:
         return
     try:
-        df = pl.read_csv(infile, separator=";", ignore_errors=True, truncate_ragged_lines=True)
+        df = pl.read_csv(
+            infile,
+            separator=";",
+            ignore_errors=True,
+            truncate_ragged_lines=True,
+        )
     except Exception as e:
         _log.warning(f"Exception reading {infile}: {e}")
         _log.warning(f"Could not read {infile}. Deleting")
@@ -24,14 +30,16 @@ def clean_2019(infile):
         if "Timestamp" in df.columns:
             df = df.with_columns(
                 pl.col("Timestamp").str.strptime(
-                    pl.Datetime, format="%d/%m/%Y %H:%M:%S"
+                    pl.Datetime,
+                    format="%d/%m/%Y %H:%M:%S",
                 ),
             )
             df = df.rename({"Timestamp": "time"})
         else:
             df = df.with_columns(
                 pl.col("PLD_REALTIMECLOCK").str.strptime(
-                    pl.Datetime, format="%d/%m/%Y %H:%M:%S.%3f"
+                    pl.Datetime,
+                    format="%d/%m/%Y %H:%M:%S.%3f",
                 ),
             )
             df = df.rename({"PLD_REALTIMECLOCK": "time"})
@@ -49,13 +57,13 @@ def clean_2019(infile):
         _log.warning(f"{infile} has no min time. Deleting")
         filepath.unlink()
         return
-    dfa = pd.read_csv(filepath, names=['rawstring'])
-    sep_count = dfa['rawstring'].str.count(';').values
+    dfa = pd.read_csv(filepath, names=["rawstring"])
+    sep_count = dfa["rawstring"].str.count(";").values
     if sep_count[-1] != np.nanmedian(sep_count):
         _log.warning(f"{infile} final line is incomplete or too long. removing")
         with open(infile) as fin:
             lines = fin.readlines()
-        with open(infile, 'w') as fout:
+        with open(infile, "w") as fout:
             fout.writelines(lines[:-1])
     if df["time"].min() > datetime.datetime(2020, 1, 1):
         return True
@@ -68,6 +76,6 @@ def clean_2019(infile):
 
 
 def clean_infiles(in_dir):
-    all_infiles = glob.glob(f"{str(in_dir)}/sea*")
+    all_infiles = glob.glob(f"{in_dir!s}/sea*")
     for infile in all_infiles:
         clean_2019(infile)

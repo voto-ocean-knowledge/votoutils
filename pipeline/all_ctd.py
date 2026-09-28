@@ -1,38 +1,48 @@
-import subprocess
 import logging
-import pandas as pd
+import subprocess
 from pathlib import Path
+
+import pandas as pd
+
 from votoutils.ctd.ctd import (
-    load_cnv_file,
-    filenames_match,
-    read_ctd,
     ds_from_df,
+    filenames_match,
     flag_ctd,
+    load_cnv_file,
+    read_ctd,
 )
 from votoutils.utilities.utilities import encode_times, mailer
 
 _log = logging.getLogger(__name__)
 
-expected_duplicates = [ "202504131338_ASTD152-ALC-R02_0788_133839",
-                        "202506101530_ASTD152-ALC-R02_0788_153043",
-                        "202506261516_ASTD152-ALC-R02_0788_151618",
-                        "202509250912_ASTD152-ALC-R02_0788_091222",
-                        "202509250811_ASTD152-ALC-R02_0910_081152",
-                        "202509051038_ASTD152-ALC-R02_0788_103838",
-                        "202511111312_ASTD152-ALC-R02_0910_131245",
-                        "202604100818_ASTD152-ALC-R02_0788_081851",
-                        ]
+expected_duplicates = [
+    "202504131338_ASTD152-ALC-R02_0788_133839",
+    "202506101530_ASTD152-ALC-R02_0788_153043",
+    "202506261516_ASTD152-ALC-R02_0788_151618",
+    "202509250912_ASTD152-ALC-R02_0788_091222",
+    "202509250811_ASTD152-ALC-R02_0910_081152",
+    "202509051038_ASTD152-ALC-R02_0788_103838",
+    "202511111312_ASTD152-ALC-R02_0910_131245",
+    "202604100818_ASTD152-ALC-R02_0788_081851",
+]
 
 
 def main():
-    location_files = list(Path("/mnt/samba/").glob("*/5_Calibration/CTD/*cation*.txt")) + list(Path("/mnt/samba/").glob("*/*/5_Calibration/CTD/*cation*.txt"))
+    location_files = list(
+        Path("/mnt/samba/").glob("*/5_Calibration/CTD/*cation*.txt"),
+    ) + list(Path("/mnt/samba/").glob("*/*/5_Calibration/CTD/*cation*.txt"))
     missing_ctd_files = []
     casts = []
     fn = 0
-    cnv_files = list(Path("/mnt/samba/").glob("*/5_Calibration/*/*SBE09*.cnv*")) + list(
-        Path("/mnt/samba/").glob("*/5_Calibration/*/*SBE19*EDITED*.cnv*"),
-    ) + list(Path("/mnt/samba/").glob("*/*/5_Calibration/*/*SBE09*.cnv*")) + list(
-        Path("/mnt/samba/").glob("*/*/5_Calibration/*/*SBE19*EDITED*.cnv*"),
+    cnv_files = (
+        list(Path("/mnt/samba/").glob("*/5_Calibration/*/*SBE09*.cnv*"))
+        + list(
+            Path("/mnt/samba/").glob("*/5_Calibration/*/*SBE19*EDITED*.cnv*"),
+        )
+        + list(Path("/mnt/samba/").glob("*/*/5_Calibration/*/*SBE09*.cnv*"))
+        + list(
+            Path("/mnt/samba/").glob("*/*/5_Calibration/*/*SBE19*EDITED*.cnv*"),
+        )
     )
     for filename in cnv_files:
         _log.info(f"Start add cnv {filename}")
@@ -94,14 +104,19 @@ def main():
         ],
     )
     if len(df_all_locs) != len(df_all_locs["File"].unique()):
-        dupes = df_all_locs[df_all_locs.duplicated(subset=['File'], keep=False)][["File", "fn"]]
+        dupes = df_all_locs[df_all_locs.duplicated(subset=["File"], keep=False)][
+            ["File", "fn"]
+        ]
         dupes = dupes.sort_values("File")
-        dupes['directory'] = dupes.fn.astype(str).str[10:-13]
-        dupes_clean = dupes[['directory', 'File']]
+        dupes["directory"] = dupes.fn.astype(str).str[10:-13]
+        dupes_clean = dupes[["directory", "File"]]
         for good_dupe in expected_duplicates:
             dupes_clean = dupes_clean[dupes_clean.File != good_dupe]
         if not dupes_clean.empty:
-            mailer("bad-ctd-locfiles", f"duplicate entries accross ctd location files, {dupes_clean}")
+            mailer(
+                "bad-ctd-locfiles",
+                f"duplicate entries accross ctd location files, {dupes_clean}",
+            )
 
     if len(missing_ctd_files) > 0:
         mailer(

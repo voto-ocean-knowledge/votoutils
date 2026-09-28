@@ -1,8 +1,9 @@
+import logging
+
 import gsw
 import numpy as np
-from scipy.interpolate import interp1d
-import logging
 import pandas as pd
+from scipy.interpolate import interp1d
 
 _log = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ def correct_rbr_lag(ds):
     Fs = np.median(1 / np.gradient(raw_seconds))
     if not 0.01 < Fs < 100:
         _log.warning(
-            f"Bad calculated sampling frequency {str(Fs)} Hz. Abort correction",
+            f"Bad calculated sampling frequency {Fs!s} Hz. Abort correction",
         )
         return ds
     _log.info(
@@ -134,7 +135,7 @@ def correct_rbr_lag(ds):
         " (accepted). Static and dynamic performance of the RBRargo3 CTD."
         " Journal of Atmospheric and Oceanic Technology."
     )
-    ds["density"].attrs["comment"] = 'In-situ density. ' + rbr_str
+    ds["density"].attrs["comment"] = "In-situ density. " + rbr_str
     ds["temperature"].attrs["comment"] += rbr_str
     ds["salinity"].attrs["comment"] += rbr_str
     return ds

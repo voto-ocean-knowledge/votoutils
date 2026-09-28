@@ -1,23 +1,32 @@
-import numpy as np
-import re
-from packaging.version import parse as parse_version
-from votoutils.glider.post_process_optics import betasw_ZHH2009
-from votoutils.utilities.geocode import filter_territorial_data, nan_bad_locations, flag_bad_locations, locs_to_seas
-from votoutils.glider.post_process_ctd import (
-    salinity_pressure_correction,
-    correct_rbr_lag,
-)
-from votoutils.glider.fix_oxygen_alseamar_bug import recalc_oxygen
 import logging
+import re
+
+import numpy as np
+from packaging.version import parse as parse_version
+
+from votoutils.glider.fix_oxygen_alseamar_bug import recalc_oxygen
+from votoutils.glider.post_process_ctd import (
+    correct_rbr_lag,
+    salinity_pressure_correction,
+)
+from votoutils.glider.post_process_optics import betasw_ZHH2009
+from votoutils.utilities.geocode import (
+    filter_territorial_data,
+    flag_bad_locations,
+    locs_to_seas,
+    nan_bad_locations,
+)
 
 _log = logging.getLogger(__name__)
 
-jammed_missions = [("SEA044", 106),
-                  ("SEA067", 73),
-                  ("SEA063", 88),
-                   ("SEA067", 86),
-                   ("SHW002", 26),
-                   ]
+jammed_missions = [
+    ("SEA044", 106),
+    ("SEA067", 73),
+    ("SEA063", 88),
+    ("SEA067", 86),
+    ("SHW002", 26),
+]
+
 
 def calculate_bbp(ds, beam_angle=117):
     # https://oceanobservatories.org/wp-content/uploads/2015/10/1341-00540_Data_Product_SPEC_FLUBSCT_OOI.pdf
@@ -117,9 +126,11 @@ def remove_jammed_locations(ds):
     attrs = ds.attrs
     if (attrs["platform_serial"], int(attrs["deployment_id"])) not in jammed_missions:
         return ds
-    for coord in ['latitude', 'longitude']:
+    for coord in ["latitude", "longitude"]:
         ds[coord].values[ds.longitude.values > 18] = np.nan
-        ds[coord].attrs['comment'] += 'This mission suffered from extensive GPS jamming. Affected lon and lat have been replace with nan'
+        ds[coord].attrs["comment"] += (
+            "This mission suffered from extensive GPS jamming. Affected lon and lat have been replace with nan"
+        )
     return ds
 
 
@@ -130,7 +141,7 @@ def correct_locations(ds):
     lon = ds.longitude[qc_good].values
     lat = ds.latitude[qc_good].values
     ds.attrs["basin"] = locs_to_seas(lon[::10], lat[::10])
-    if len(lon>0) and len(lat)>0:
+    if len(lon > 0) and len(lat) > 0:
         ds.attrs["geospatial_lon_min"] = np.nanmin(lon)
         ds.attrs["geospatial_lon_max"] = np.nanmax(lon)
         ds.attrs["geospatial_lat_min"] = np.nanmin(lat)
@@ -155,77 +166,97 @@ def hydrostatic_depth(ds):
         ds with additional depth_hydrostatic variable"""
 
     def surface_layer_pot_density(ds):
-        """ compute surface properties to approximate hydrostatic start depth for profiles with
+        """compute surface properties to approximate hydrostatic start depth for profiles with
         start_depth>0
 
         Returns:
            mean salinity and temperature between 1-2 dbar depth (to make sure it is within MLD)
         """
-        ds_surface = ds.where((ds.pressure>1) & (ds.pressure<3))
+        ds_surface = ds.where((ds.pressure > 1) & (ds.pressure < 3))
         ds_surface = ds_surface.mean()
         return float(ds_surface.potential_density)
 
     def compute_depth_hydrostatic(dfprofile):
-        downcast=True if dfprofile["profile_direction"].iloc[0]==1. else False
-        dfprofile = dfprofile[::-1] if not downcast else dfprofile # flip upcasts for hydrostatic calculation
-        start_depth = dfprofile["pressure"].iloc[0]*10**4/(g*surface_pot_density)
+        downcast = True if dfprofile["profile_direction"].iloc[0] == 1.0 else False
+        dfprofile = (
+            dfprofile[::-1] if not downcast else dfprofile
+        )  # flip upcasts for hydrostatic calculation
+        start_depth = dfprofile["pressure"].iloc[0] * 10**4 / (g * surface_pot_density)
         if len(dfprofile["pressure"]) <= 1:
             dfprofile["delta_z"] = np.full([len(dfprofile["pressure"])], np.nan)
-            dfprofile["depth_hydrostatic"] = np.full([len(dfprofile["pressure"])], np.nan)
+            dfprofile["depth_hydrostatic"] = np.full(
+                [len(dfprofile["pressure"])],
+                np.nan,
+            )
             return dfprofile
 
-        dfprofile["delta_z"] = -np.gradient(dfprofile["pressure"]*10**4)/(g*dfprofile["potential_density"])
-        dfprofile["depth_hydrostatic"] = -np.nancumsum(dfprofile["delta_z"])+start_depth
-        dfprofile = dfprofile[::-1] if not downcast else dfprofile # flip back upcasts after calculation
+        dfprofile["delta_z"] = -np.gradient(dfprofile["pressure"] * 10**4) / (
+            g * dfprofile["potential_density"]
+        )
+        dfprofile["depth_hydrostatic"] = (
+            -np.nancumsum(dfprofile["delta_z"]) + start_depth
+        )
+        dfprofile = (
+            dfprofile[::-1] if not downcast else dfprofile
+        )  # flip back upcasts after calculation
         return dfprofile
 
-    g = 9.82 # best approximate value for Baltic Sea latitude
+    g = 9.82  # best approximate value for Baltic Sea latitude
     surface_pot_density = surface_layer_pot_density(ds)
-    df = ds.to_pandas() # much better performance of pandas compared to xarray
+    df = ds.to_pandas()  # much better performance of pandas compared to xarray
     df = df.groupby("profile_num").apply(compute_depth_hydrostatic)
-    ds["depth_hydrostatic"] = df.droplevel('profile_num')["depth_hydrostatic"]
+    ds["depth_hydrostatic"] = df.droplevel("profile_num")["depth_hydrostatic"]
     return ds
 
 
 def fix_specific_mission(ds):
-    platform_mission = (ds.attrs['platform_serial'], int(ds.attrs['deployment_id']))
-    if 'legato4' in str(ds.attrs['ctd'].lower()):
+    platform_mission = (ds.attrs["platform_serial"], int(ds.attrs["deployment_id"]))
+    if "legato4" in str(ds.attrs["ctd"].lower()):
         # The legato4 pressure sensor is not corrected for air pressure in early versions of pld software
-        pld_string = ds.attrs['seapld']
-        pld_version = parse_version(pld_string.split('-')[0].replace(' ', ''))
-        legato4_fix_version = parse_version('2.26.1')
+        pld_string = ds.attrs["seapld"]
+        pld_version = parse_version(pld_string.split("-")[0].replace(" ", ""))
+        legato4_fix_version = parse_version("2.26.1")
 
         if pld_version < legato4_fix_version:
-            ds['pressure'].values -= 10
-            ds['depth'].values -= 10
-            ds['pressure'].attrs['comment'] += 'manually corrected for air pressure offset'
-            ds['depth'].attrs['comment'] += 'manually corrected for air pressure offset'
+            ds["pressure"].values -= 10
+            ds["depth"].values -= 10
+            ds["pressure"].attrs["comment"] += (
+                "manually corrected for air pressure offset"
+            )
+            ds["depth"].attrs["comment"] += "manually corrected for air pressure offset"
 
     match platform_mission:
-
-        case ('SHW002', 26):
+        case ("SHW002", 26):
             # On this mission the nav memory card failed after 3 weeks. Need to make artificial
             # dead reckoning data to fix this, as this is needed for the ADCP processing
-            dead = ds['dead_reckoning'].values
-            dead[ds['time'] > np.datetime64('2026-05-10T16:00:00')] = 1
-            dead[np.logical_and(ds['time'] > np.datetime64('2026-05-10T16:00:00'), ds['depth']< 2.5)] = 0
-            ds['dead_reckoning'].values = dead
-            ds['dead_reckoning'].attrs['comment'] = 'Dead reckoning manually created after 2026-05-10T16:00:00 when glider memory card failed to enable ADCP processing'
+            dead = ds["dead_reckoning"].values
+            dead[ds["time"] > np.datetime64("2026-05-10T16:00:00")] = 1
+            dead[
+                np.logical_and(
+                    ds["time"] > np.datetime64("2026-05-10T16:00:00"),
+                    ds["depth"] < 2.5,
+                )
+            ] = 0
+            ds["dead_reckoning"].values = dead
+            ds["dead_reckoning"].attrs["comment"] = (
+                "Dead reckoning manually created after 2026-05-10T16:00:00 when glider memory card failed to enable ADCP processing"
+            )
 
     return ds
 
 
 def add_uncorr_variables(ds):
-    ds['temperature_uncorrected'] = ds['temperature'].copy()
-    ds['temperature_uncorrected'].attrs['comment'] = 'uncorrected temperature'
-    ds['conductivity_uncorrected'] = ds['conductivity'].copy()
-    ds['conductivity_uncorrected'].attrs['comment'] = 'uncorrected conductivity'
+    ds["temperature_uncorrected"] = ds["temperature"].copy()
+    ds["temperature_uncorrected"].attrs["comment"] = "uncorrected temperature"
+    ds["conductivity_uncorrected"] = ds["conductivity"].copy()
+    ds["conductivity_uncorrected"].attrs["comment"] = "uncorrected conductivity"
     return ds
+
 
 def post_process(ds):
     _log.info("start post process")
     ds = fix_specific_mission(ds)
-    #ds = add_uncorr_variables()
+    # ds = add_uncorr_variables()
     ds = salinity_pressure_correction(ds)
     ds = correct_rbr_lag(ds)
     ds = recalc_oxygen(ds)

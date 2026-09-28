@@ -1,12 +1,13 @@
-import numpy as np
-import yaml
-import ioos_qc
-from ioos_qc.config import Config
-from ioos_qc.qartod import aggregate
-from ioos_qc.streams import XarrayStream
-from ioos_qc.results import collect_results, CollectedResult
 import datetime
 import logging
+
+import ioos_qc
+import numpy as np
+import yaml
+from ioos_qc.config import Config
+from ioos_qc.qartod import aggregate
+from ioos_qc.results import CollectedResult, collect_results
+from ioos_qc.streams import XarrayStream
 
 _log = logging.getLogger(__name__)
 
@@ -159,16 +160,23 @@ def apply_ioos_flags(ds, config):
     proc_record = str(call)
     return flag_vals, proc_record
 
+
 def flag_ioos(ds, baltic=True):
-    if ds.attrs['sea_name'].lower != 'baltic':
+    if ds.attrs["sea_name"].lower != "baltic":
         baltic = False
     configs = get_configs()
     if baltic:
         for config_name, config in configs.items():
-            config[config_name]['qartod']['location_test'] = {'bbox': location_bbox_baltic}
+            config[config_name]["qartod"]["location_test"] = {
+                "bbox": location_bbox_baltic,
+            }
     else:
-        configs['conductivity']['conductivity']['qartod'] = {"gross_range_test": {"suspect_span": [5, 60], "fail_span": [2, 65]}}
-        configs['salinity']['conductivity']['qartod'] = {"gross_range_test": {"suspect_span": [5, 60], "fail_span": [2, 65]}}
+        configs["conductivity"]["conductivity"]["qartod"] = {
+            "gross_range_test": {"suspect_span": [5, 60], "fail_span": [2, 65]},
+        }
+        configs["salinity"]["conductivity"]["qartod"] = {
+            "gross_range_test": {"suspect_span": [5, 60], "fail_span": [2, 65]},
+        }
     # If the glider has a GPCTD, use this for the salinity config
     if ds["conductivity"].attrs["units"] == "S m-1":
         configs["salinity"]["conductivity"]["qartod"]["gross_range_test"] = {
@@ -220,7 +228,7 @@ def flag_ioos(ds, baltic=True):
 
 
 def flag_oxygen(ds):
-    if 'oxygen' not in list(ds):
+    if "oxygen" not in list(ds):
         return ds
     oxy_meta_str = ds.oxygen
     import ast
@@ -248,7 +256,9 @@ def flag_pilot(ds):
     attrs = ds.attrs
     platform_serial = attrs["glider_serial"]
     mission = attrs["deployment_id"]
-    mission_yaml = f"/data/deployment_yaml/mission_yaml/{platform_serial}_M{mission}.yml"
+    mission_yaml = (
+        f"/data/deployment_yaml/mission_yaml/{platform_serial}_M{mission}.yml"
+    )
     with open(mission_yaml) as fin:
         deployment = yaml.safe_load(fin)
     if "qc" not in deployment.keys():

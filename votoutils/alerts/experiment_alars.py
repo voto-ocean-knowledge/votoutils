@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
-import requests
 
+import requests
 
 script_dir = Path(__file__).parent.parent.parent.absolute()
 

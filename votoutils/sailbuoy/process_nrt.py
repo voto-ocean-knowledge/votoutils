@@ -1,16 +1,20 @@
 import datetime
+import logging
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
-import logging
 import xarray as xr
-from votoutils.utilities.geocode import locs_to_seas
-from votoutils.sailbuoy.sailbuoy_functions import get_attrs, clean_names_nrt, add_sensors
-from votoutils.utilities import vocabularies
 
+from votoutils.sailbuoy.sailbuoy_functions import (
+    add_sensors,
+    clean_names_nrt,
+    get_attrs,
+)
+from votoutils.utilities import vocabularies
+from votoutils.utilities.geocode import locs_to_seas
 
 _log = logging.getLogger(__name__)
-
 
 
 def all_nrt_sailbuoys(full_dir, all_missions=False):
@@ -22,7 +26,7 @@ def all_nrt_sailbuoys(full_dir, all_missions=False):
     for nav, pld in zip(navs, plds):
         if nav.name[:6] != pld.name[:6]:
             raise ValueError(
-                f"nav and pld filenames do not match {nav.name} {pld.name}"
+                f"nav and pld filenames do not match {nav.name} {pld.name}",
             )
         sb_num = int(nav.name[2:6])
         _log.info(f"process {sb_num}")
@@ -31,7 +35,11 @@ def all_nrt_sailbuoys(full_dir, all_missions=False):
         if pld_2.exists():
             _log.info(f"process {sb_num} pld2")
             split_nrt_sailbuoy(
-                nav, pld_2, sb_num, all_missions, mission_num=sb_mission_num
+                nav,
+                pld_2,
+                sb_num,
+                all_missions,
+                mission_num=sb_mission_num,
             )
     _log.info("Finished processing nrt sailbuoy data")
 
@@ -81,7 +89,9 @@ def split_nrt_sailbuoy(
         if dt > max_nocomm_time:
             df_mission = df_combi[start_i:i]
             if sb_num == 2120:
-                df_mission = df_mission[~np.logical_and(df_mission.Lat < 55.015, df_mission.Long < 13.23552)]
+                df_mission = df_mission[
+                    ~np.logical_and(df_mission.Lat < 55.015, df_mission.Long < 13.23552)
+                ]
 
             df_clean = clean_sailbuoy_df(df_mission)
             if len(df_clean) == 0:
@@ -121,7 +131,7 @@ def make_sailbuoy_ds(df, sb, mission):
 
     # cut dataset down to active deployed period
     # todo
-    ds = get_attrs(ds, f'SB{sb}', postscript='R')
+    ds = get_attrs(ds, f"SB{sb}", postscript="R")
     ds = add_sensors(ds)
     ds.attrs["variables"] = list(ds.variables)
     ds["trajectory"] = xr.DataArray(1, attrs={"cf_role": "trajectory_id"})
@@ -132,12 +142,12 @@ def make_sailbuoy_ds(df, sb, mission):
 
 
 def make_sailbuoy_ds_legacy(df, sb, mission):
-    df =  df.rename({'Time': 'time'}, axis=1)
+    df = df.rename({"Time": "time"}, axis=1)
     df.index = df.time
     ds = df.to_xarray()
     ds["longitude"] = ds.Long
     ds["latitude"] = ds.Lat
-    drops = [ 'Unnamed: 45','Time', 'time_diff']
+    drops = ["Unnamed: 45", "Time", "time_diff"]
     to_drop = set(drops).intersection(list(ds))
     basin_str = locs_to_seas(ds.latitude, ds.longitude)
     ds = ds.drop_vars(to_drop)
@@ -201,10 +211,9 @@ def clean_sailbuoy_df(df, speed_limit=4, max_distance=5000):
     return df
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig(
-        filename=f"/data/log/sailbuoy_nrt.log",
+        filename="/data/log/sailbuoy_nrt.log",
         filemode="a",
         format="%(asctime)s %(levelname)-8s %(message)s",
         level=logging.INFO,
