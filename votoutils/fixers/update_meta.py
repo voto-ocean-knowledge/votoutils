@@ -1,12 +1,13 @@
-import os
-import sys
-import pathlib
 import argparse
 import logging
+import os
+import pathlib
 import shutil
+import sys
+from itertools import chain
+
 import xarray as xr
 import yaml
-from itertools import chain
 
 script_dir = pathlib.Path(__file__).parent.absolute()
 sys.path.append(str(script_dir))
@@ -52,7 +53,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.kind not in ["raw", "sub", None]:
         raise ValueError("kind must be raw or sub")
-    logf = f"/data/log/update_meta/SEA{str(args.glider)}_M{str(args.mission)}.log"
+    logf = f"/data/log/update_meta/SEA{args.glider!s}_M{args.mission!s}.log"
     logging.basicConfig(
         filename=logf,
         filemode="w",
@@ -60,14 +61,18 @@ if __name__ == "__main__":
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    yml_file = f"/data/deployment_yaml/mission_yaml//SEA{str(args.glider)}_M{str(args.mission)}.yml"
+    yml_file = (
+        f"/data/deployment_yaml/mission_yaml//SEA{args.glider!s}_M{args.mission!s}.yml"
+    )
     types = []
     if args.kind in ["sub", None]:
         types.append("nrt")
     if args.kind in ["raw", None]:
         types.append("complete_mission")
     for sub_dir in types:
-        root_dir = f"/data/data_l0_pyglider/{sub_dir}/SEA{str(args.glider)}/M{str(args.mission)}"
+        root_dir = (
+            f"/data/data_l0_pyglider/{sub_dir}/SEA{args.glider!s}/M{args.mission!s}"
+        )
         _log.info(f"working on ncs in {root_dir}")
         nc_files = []
         for sub in ("profiles", "timeseries", "gridfiles"):

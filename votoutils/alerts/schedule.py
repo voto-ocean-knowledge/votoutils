@@ -1,9 +1,11 @@
-import pandas as pd
-import numpy as np
-from pathlib import Path
 import datetime
 import json
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import pytz
+
 from votoutils.utilities.utilities import mailer
 
 script_dir = Path(__file__).parent.parent.parent.absolute()

@@ -2,6 +2,7 @@ cfgrib
 dateparser
 erddapy
 geopandas>=1.0.0
+gliderad2cp
 gsw
 httpx
 ioos_qc

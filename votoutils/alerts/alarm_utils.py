@@ -1,13 +1,15 @@
-import json
-import pandas as pd
-from pathlib import Path
-import requests
-import logging
 import datetime
 import email
 import imaplib
-import sys
+import json
+import logging
 import re
+import sys
+from pathlib import Path
+
+import pandas as pd
+import requests
+
 from votoutils.utilities.utilities import mailer
 
 _log = logging.getLogger(name="core_log")
@@ -15,7 +17,8 @@ _log = logging.getLogger(name="core_log")
 script_dir = Path(__file__).parent.parent.parent.absolute()
 
 format_basic = logging.Formatter(
-    "%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    "%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 format_alarm = logging.Formatter("%(asctime)s,%(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
@@ -27,7 +30,11 @@ with open(script_dir / "contacts_secrets.json", "r") as secrets_file:
 mail_recipient = secrets_dict["schedule_mail"]
 
 schedule = pd.read_csv(
-    "/data/log/schedule.csv", parse_dates=True, index_col=0, sep=";", dtype=str
+    "/data/log/schedule.csv",
+    parse_dates=True,
+    index_col=0,
+    sep=";",
+    dtype=str,
 )
 for name, number in contacts.items():
     schedule.replace(name, number, inplace=True, regex=True)
@@ -47,7 +54,7 @@ def extra_alarm_recipients():
     votoweb_dir = secrets_dict["votoweb_dir"]
     sys.path.append(votoweb_dir)
     from voto.data.db_classes import User  # noqa
-    from voto.bin.add_profiles import init_db  # noqa
+    from voto.bin.add_profiles import init_db
 
     init_db()
     users_to_alarm = User.objects(alarm=True)
@@ -138,7 +145,7 @@ def parse_mrs(comm_log_file):
         alarm_mask = int(alarm_parts[1].split("*")[0])
         if alarm_mask != 0:
             _log.warning(
-                f"Masking alarm! Mask {alarm_mask} glider {df_mrs.glider.values[0]} mission {df_mrs.mission.values[0]} cycle {df_mrs.cycle.values[-1]}"
+                f"Masking alarm! Mask {alarm_mask} glider {df_mrs.glider.values[0]} mission {df_mrs.mission.values[0]} cycle {df_mrs.cycle.values[-1]}",
             )
             df_mrs.loc[df_mrs.security_level == alarm_mask, "alarm"] = False
     df_mrs = df_mrs.sort_values("datetime")
@@ -168,16 +175,20 @@ def elks_text(ddict, recipient=pilot_phone, user="pilot", fake=True):
     _log.warning(f"ELKS SEND: {response.text}")
     if response.status_code == 200:
         alarm_log.info(
-            f"{ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},text_{user}, {ddict['alarm_source']}"
+            f"{ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},text_{user}, {ddict['alarm_source']}",
         )
     else:
         _log.error(
-            f"failed elks text {response.text}  {response.text} to {recipient}. {ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},call_{user}, {ddict['alarm_source']}"
+            f"failed elks text {response.text}  {response.text} to {recipient}. {ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},call_{user}, {ddict['alarm_source']}",
         )
 
 
 def elks_call(
-    ddict, recipient=pilot_phone, user="pilot", fake=True, timeout_seconds=60
+    ddict,
+    recipient=pilot_phone,
+    user="pilot",
+    fake=True,
+    timeout_seconds=60,
 ):
     recipient = re.sub(r"[^0-9+]", "", recipient)
     alarm_log = logging.getLogger(name=ddict["platform_id"])
@@ -206,11 +217,11 @@ def elks_call(
     _log.warning(f"ELKS CALL: {response.text}")
     if response.status_code == 200:
         alarm_log.info(
-            f"{ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},call_{user}, {ddict['alarm_source']}"
+            f"{ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},call_{user}, {ddict['alarm_source']}",
         )
     else:
         _log.error(
-            f"failed elks call {response.text} to {recipient}. {ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},call_{user}, {ddict['alarm_source']}"
+            f"failed elks call {response.text} to {recipient}. {ddict['glider']},{ddict['mission']},{ddict['cycle']},{ddict['security_level']},call_{user}, {ddict['alarm_source']}",
         )
 
 
@@ -294,8 +305,8 @@ def surfacing_alerts(fake=True):
     timefile = Path("lastcheck_surface.txt")
     if timefile.exists():
         with open(timefile, "r") as variable_file:
-            for line in variable_file.readlines():
-                last_check = datetime.datetime.fromisoformat((line.strip()))
+            for line in variable_file:
+                last_check = datetime.datetime.fromisoformat(line.strip())
     else:
         last_check = datetime.datetime(1970, 1, 1)
 

@@ -1,7 +1,7 @@
-from pathlib import Path
 import datetime
-import pyglider_all_complete
+from pathlib import Path
 
+import pyglider_all_complete
 
 if __name__ == "__main__":
     logf = Path("/data/log/pyglider_all_complete.log")

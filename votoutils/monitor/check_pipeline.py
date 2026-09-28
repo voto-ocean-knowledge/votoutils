@@ -4,18 +4,20 @@ To monitor a file, add the path to it and part of its expected last line to the 
 """
 
 import datetime
-from pathlib import Path
-import re
-import pandas as pd
-from votoutils.utilities.utilities import mailer
 import logging
+import re
+from pathlib import Path
+
+import pandas as pd
+
+from votoutils.utilities.utilities import mailer
 
 _log = logging.getLogger(__name__)
 
 files_collection = (
     ("voto_stats_data.log", "Finished computing stats", 2),
     ("pyglider_nrt.log", "Finished nrt processing", 2),
-    #("voto_add_sailbuoy.log", "Finished download of sailbuoy data", 2),
+    # ("voto_add_sailbuoy.log", "Finished download of sailbuoy data", 2),
     ("sailbuoy.log", "Finished processing nrt sailbuoy data", 2),
     ("voto_add_data.log", "nrt mission add complete", 2),
     ("nrt_plots.log", "End plot creation", 2),
@@ -29,7 +31,7 @@ files_collection = (
     ("new_complete_mission.log", "Complete", 25),
     ("process_ctd.log", "Complete process ctds", 25),
     ("ctd_plots.log", "completed process all CTDs", 25),
-    #("glider_transect.log", "End analysis", 2),
+    # ("glider_transect.log", "End analysis", 2),
     ("metadata_tables.log", "End processing", 25),
     ("cherrdap.log", "ERDDAP checks complete", 25),
 )
@@ -46,7 +48,7 @@ def check_log_file(file, expected_last_line, hours):
         skiplines = len(df) - 50
     except pd.errors.ParserError:
         skiplines = 0
-    if 'rsync' in file:
+    if "rsync" in file:
         skiplines = 200
     last_line = ""
     dt_base = datetime.datetime(1970, 1, 1)

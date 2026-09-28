@@ -1,14 +1,20 @@
 import glob
-import os
-import sys
-import pathlib
 import logging
+import os
+import pathlib
+import sys
+
 import numpy as np
-import xarray as xr
 import pandas as pd
-from votoutils.glider.process_pyglider import proc_pyglider_l0
-from votoutils.utilities.utilities import natural_sort, platforms_no_proc, missions_no_proc
+import xarray as xr
+
 from votoutils.glider.metocc import create_csv
+from votoutils.glider.process_pyglider import proc_pyglider_l0
+from votoutils.utilities.utilities import (
+    missions_no_proc,
+    natural_sort,
+    platforms_no_proc,
+)
 
 script_dir = pathlib.Path(__file__).parent.absolute()
 sys.path.append(str(script_dir))
@@ -40,7 +46,9 @@ def proc_nrt():
         mission_paths.sort()
         mission = str(mission_paths[-1].parts[-2]).lstrip("0")
         if (platform_serial, int(mission)) in missions_no_proc:
-            _log.info(f"Will not process {platform_serial}, M{mission} as it is in missions_no_proc")
+            _log.info(
+                f"Will not process {platform_serial}, M{mission} as it is in missions_no_proc",
+            )
             continue
         _log.info(f"Checking {platform_serial} M{mission}")
         input_dir = f"/data/data_raw/nrt/{platform_serial}/{mission.zfill(6)}/C-Csv/"

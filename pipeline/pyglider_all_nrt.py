@@ -1,7 +1,8 @@
-import os
-import sys
-import pathlib
 import logging
+import os
+import pathlib
+import sys
+
 from votoutils.glider.process_pyglider import proc_pyglider_l0
 from votoutils.utilities.utilities import missions_no_proc
 
@@ -19,7 +20,7 @@ logging.basicConfig(
 )
 
 
-def proc_all_nrt(reprocess = True):
+def proc_all_nrt(reprocess=True):
     _log.info("Start nrt reprocessing")
     yml_files = list(pathlib.Path("/data/deployment_yaml/mission_yaml").glob("*.yml"))
     yml_files.sort()
@@ -36,7 +37,9 @@ def proc_all_nrt(reprocess = True):
         if (platform_serial, int(mission)) in missions_no_proc:
             _log.info(f"skipping {platform_serial, mission}")
             continue
-        input_dir = f"/data/data_raw/nrt/{platform_serial}/{str(mission).zfill(6)}/C-Csv/"
+        input_dir = (
+            f"/data/data_raw/nrt/{platform_serial}/{str(mission).zfill(6)}/C-Csv/"
+        )
         if not pathlib.Path(input_dir).exists():
             _log.info(
                 f"{platform_serial} M{mission} does not have nrt alseamar raw files. skipping",

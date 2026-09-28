@@ -1,9 +1,10 @@
+import logging
 import os
 import sys
 from pathlib import Path
-import logging
-from votoutils.utilities.utilities import missions_no_proc
+
 from votoutils.sailbuoy.sailbuoy_raw_to_nc import Sailbuoy
+from votoutils.utilities.utilities import missions_no_proc
 
 script_dir = Path(__file__).parent.absolute()
 sys.path.append(str(script_dir))
@@ -50,11 +51,13 @@ def proc_all_complete(reprocess=True):
         data_in = f"/data/data_raw/complete_mission/{platform_serial}/M{mission}"
         data_out = f"/data/data_l0/complete_mission/{platform_serial}/M{mission}"
         if not Path(f"/data/data_l0/complete_mission/{platform_serial}").exists():
-            Path(f"/data/data_l0/complete_mission/{platform_serial}").mkdir(parents=True)
+            Path(f"/data/data_l0/complete_mission/{platform_serial}").mkdir(
+                parents=True,
+            )
         sb = Sailbuoy(
             data_in,
             data_out,
-            f"/data/deployment_yaml/sailbuoy_yaml/{platform_serial}_M{mission}.yml"
+            f"/data/deployment_yaml/sailbuoy_yaml/{platform_serial}_M{mission}.yml",
         )
         sb.process()
     _log.info("Finished complete processing")

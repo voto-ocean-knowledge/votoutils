@@ -1,5 +1,6 @@
-import pandas as pd
 import glob
+
+import pandas as pd
 
 infiles = glob.glob("bad_pld/sea061.48.pld1.raw.1???.gz")
 for a in infiles:

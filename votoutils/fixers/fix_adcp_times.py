@@ -1,9 +1,11 @@
-import xarray as xr
-from pathlib import Path
-import shutil
-from votoutils.utilities.utilities import encode_times
 import logging
+import shutil
+from pathlib import Path
+
 import pandas as pd
+import xarray as xr
+
+from votoutils.utilities.utilities import encode_times
 
 _log = logging.getLogger(__name__)
 
@@ -16,7 +18,7 @@ def fix_all_adcp_times():
             df = pd.read_csv("/data/log/fixer.log", names=["data"])
             done = "".join(df.data)
             if str(mission_path) in done:
-                _log.warning(f"already processed {str(mission_path)} skipping")
+                _log.warning(f"already processed {mission_path!s} skipping")
                 continue
             glider = int(glider_path.parts[-1][3:])
             mission = int(mission_path.parts[-1][1:])

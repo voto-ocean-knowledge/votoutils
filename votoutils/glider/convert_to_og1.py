@@ -1,10 +1,12 @@
 import datetime
-import pandas as pd
-import numpy as np
-import xarray as xr
-from votoutils.utilities.utilities import encode_times_og1, set_best_dtype
-from votoutils.utilities import vocabularies
 import logging
+
+import numpy as np
+import pandas as pd
+import xarray as xr
+
+from votoutils.utilities import vocabularies
+from votoutils.utilities.utilities import encode_times_og1, set_best_dtype
 
 _log = logging.getLogger(__name__)
 
@@ -43,7 +45,7 @@ def add_sensors(ds, dsa):
         var_dict = vocabularies.sensor_vocabs[attr_dict["make_model"]]
         if "serial" in attr_dict.keys():
             var_dict["serial_number"] = str(attr_dict["serial"])
-            var_dict["long_name"] += f":{str(attr_dict['serial'])}"
+            var_dict["long_name"] += f":{attr_dict['serial']!s}"
         for var_name in ["calibration_date", "calibration_parameters"]:
             if var_name in attr_dict.keys():
                 var_dict[var_name] = str(attr_dict[var_name])
@@ -98,7 +100,7 @@ def convert_to_og1(ds, num_vals=None):
                 ds[qc_name].attrs,
             )
             dsa[qc_name].attrs["long_name"] = (
-                f'{dsa[var_name].attrs["long_name"]} Quality Flag'
+                f"{dsa[var_name].attrs['long_name']} Quality Flag"
             )
             dsa[qc_name].attrs["standard_name"] = "status_flag"
             dsa[qc_name].attrs["flag_values"] = np.array((1, 2, 3, 4, 9)).astype("int8")
@@ -144,7 +146,7 @@ def convert_to_og1(ds, num_vals=None):
     for key in ["glider_serial", "dataset_id", "contributor_name", "comment"]:
         attrs[key] = ds.attrs[key]
     for drop_attr in ["Metadata_Conventions"]:
-        if drop_attr in attrs.keys():
+        if drop_attr in attrs:
             attrs.pop(drop_attr)
     start_datetime = pd.to_datetime(dsa.TIME.values, unit="s").min()
     ts = start_datetime.strftime("%Y%m%dT%H%M")

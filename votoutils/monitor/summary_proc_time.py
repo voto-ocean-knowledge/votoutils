@@ -1,5 +1,6 @@
-import pandas as pd
 import datetime
+
+import pandas as pd
 
 df = pd.read_csv("/home/pipeline/reprocess.csv", parse_dates=["proc_time"])
 

@@ -1,21 +1,23 @@
+import logging
 import os
-import sys
 import pathlib
 import shutil
-import yaml
+import sys
+
 import numpy as np
 import polars as pl
 import xarray as xr
-import logging
+import yaml
+
 _log = logging.getLogger(__name__)
 
-from votoutils.glider import grid_glider_data
-from votoutils.glider.pre_process import clean_infiles
-from votoutils.utilities.geocode import get_seas_merged_nav_nc
-from votoutils.glider.post_process_dataset import post_process
-from votoutils.utilities.utilities import encode_times, set_best_dtype
 from votoutils.fixers.file_operations import clean_nrt_bad_files
+from votoutils.glider import grid_glider_data
+from votoutils.glider.post_process_dataset import post_process
+from votoutils.glider.pre_process import clean_infiles
 from votoutils.qc.flag_qartod import flagger
+from votoutils.utilities.geocode import get_seas_merged_nav_nc
+from votoutils.utilities.utilities import encode_times, set_best_dtype
 
 script_dir = pathlib.Path(__file__).parent.parent.parent.absolute()
 parent_dir = script_dir.parents[0]
@@ -24,10 +26,10 @@ sys.path.append(str(qc_dir))
 pyglider_dir = parent_dir / "pyglider"
 sys.path.append(str(pyglider_dir))
 # noinspection PyUnresolvedReferences
-import pyglider.seaexplorer as seaexplorer  # noqa:E402
-
 # noinspection PyUnresolvedReferences
-import pyglider.ncprocess as ncprocess  # noqa: E402
+from pyglider import (
+    seaexplorer,
+)
 
 os.chdir(pyglider_dir)
 
@@ -43,16 +45,16 @@ def set_profile_numbers(ds):
     df = ds.to_pandas()
     dive_nums = np.unique(ds.dive_num)
     min_time = np.nanmin(ds.time.values)
-    ds['good_dive'] = xr.DataArray(np.ones(len(ds.time)), dims='time')
+    ds["good_dive"] = xr.DataArray(np.ones(len(ds.time)), dims="time")
     for num in dive_nums:
         df_dive = df[df.dive_num == num]
         if np.nanmin(df_dive.index) < min_time:
-            _log.warning(f'invalid timestamps found in dive number {num}. Dropping')
-            ds['good_dive'].values[ds['dive_num'] == num] = np.nan
+            _log.warning(f"invalid timestamps found in dive number {num}. Dropping")
+            ds["good_dive"].values[ds["dive_num"] == num] = np.nan
             continue
         min_time = np.nanmin(df_dive.index)
-    ds = ds.dropna(dim='time', subset=['good_dive'])
-    ds = ds.drop_vars(['good_dive'])
+    ds = ds.dropna(dim="time", subset=["good_dive"])
+    ds = ds.drop_vars(["good_dive"])
     df = ds.to_pandas()
     df["profile_index"] = 1
     deepest_points = []
@@ -121,9 +123,9 @@ def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
     profiledir = output_dir + "profiles/"
     griddir = output_dir + "gridfiles/"
     original_deploymentyaml = (
-        f"/data/deployment_yaml/mission_yaml/{platform_serial}_M{str(mission)}.yml"
+        f"/data/deployment_yaml/mission_yaml/{platform_serial}_M{mission!s}.yml"
     )
-    deploymentyaml = f"/data/tmp/deployment_yml/{platform_serial}_M{str(mission)}.yml"
+    deploymentyaml = f"/data/tmp/deployment_yml/{platform_serial}_M{mission!s}.yml"
 
     clean_infiles(input_dir)
     seaexplorer.raw_to_rawnc(rawdir, rawncdir, original_deploymentyaml)
@@ -186,27 +188,36 @@ def proc_pyglider_l0(platform_serial, mission, kind, input_dir, output_dir):
     ds = set_best_dtype(ds)
     ds = encode_times(ds)
     ds.to_netcdf(outname)
-    if kind=='raw':
+    if kind == "raw":
         from votoutils.ad2cp.ad2cp_proc import adcp_data_present, proc_gliderad2cp
+
         if adcp_data_present(platform_serial, mission):
             proc_gliderad2cp(platform_serial, mission)
     grid_glider_data.make_gridfile_gliderad2cp(platform_serial, mission, kind)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     glider = "SHW002"
     mission = 26
-    kind = 'raw'
-    if kind == 'raw':
-        nc_out = proc_pyglider_l0(glider, mission, 'raw',f"/data/data_raw/complete_mission/{glider}/M{mission}",
-                                   f"/data/data_l0_pyglider/complete_mission/{glider}/M{mission}/",
-                                  )
+    kind = "raw"
+    if kind == "raw":
+        nc_out = proc_pyglider_l0(
+            glider,
+            mission,
+            "raw",
+            f"/data/data_raw/complete_mission/{glider}/M{mission}",
+            f"/data/data_l0_pyglider/complete_mission/{glider}/M{mission}/",
+        )
     else:
-        nc_out = proc_pyglider_l0(glider, mission, 'sub', f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
-                                   f"/data/data_l0_pyglider/nrt/{glider}/M{mission}/",
-                                  )
+        nc_out = proc_pyglider_l0(
+            glider,
+            mission,
+            "sub",
+            f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
+            f"/data/data_l0_pyglider/nrt/{glider}/M{mission}/",
+        )
 
-    
-    #proc_pyglider_l0(glider, mission, 'sub', f"/data/data_raw/nrt/{glider}/0000{str(mission)}/C-Csv", f"/data/data_l0_pyglider/nrt/{glider}/M{mission}/")
-    #proc_pyglider_l0(glider, mission, 'raw', f"/data/data_raw/complete_mission/{glider}/M{str(mission)}", f"/data/data_l0_pyglider/complete_mission/{glider}/M{mission}/")
-    #proc_pyglider_l0("SEA079", 20, 'sub', "/data/data_raw/nrt/SEA079/000020/C-Csv", "/data/data_l0_pyglider/nrt/SEA079/M20/")
-    #proc_pyglider_l0("SHW001", 34, 'sub', "/data/data_raw/nrt/SHW001/000034/C-Csv/", "/data/data_l0_pyglider/nrt/SHW001/M34/")
+    # proc_pyglider_l0(glider, mission, 'sub', f"/data/data_raw/nrt/{glider}/0000{str(mission)}/C-Csv", f"/data/data_l0_pyglider/nrt/{glider}/M{mission}/")
+    # proc_pyglider_l0(glider, mission, 'raw', f"/data/data_raw/complete_mission/{glider}/M{str(mission)}", f"/data/data_l0_pyglider/complete_mission/{glider}/M{mission}/")
+    # proc_pyglider_l0("SEA079", 20, 'sub', "/data/data_raw/nrt/SEA079/000020/C-Csv", "/data/data_l0_pyglider/nrt/SEA079/M20/")
+    # proc_pyglider_l0("SHW001", 34, 'sub', "/data/data_raw/nrt/SHW001/000034/C-Csv/", "/data/data_l0_pyglider/nrt/SHW001/M34/")

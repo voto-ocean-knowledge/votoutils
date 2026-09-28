@@ -1,14 +1,15 @@
-import geopandas as gp
-import pandas as pd
-import xarray as xr
-import polars as pl
+import argparse
 import logging
 import pathlib
-import argparse
 import shutil
-import numpy as np
-from itertools import chain
 from collections import Counter
+from itertools import chain
+
+import geopandas as gp
+import numpy as np
+import pandas as pd
+import polars as pl
+import xarray as xr
 
 _log = logging.getLogger(__name__)
 
@@ -41,23 +42,27 @@ def nan_bad_locations(ds, max_flag=3):
     return ds
 
 
-def flag_bad_locations(ds, threshold = 1, sus_threshold=0.6):
+def flag_bad_locations(ds, threshold=1, sus_threshold=0.6):
     # threshold is max speed in m/s
     lat_to_m = 111 * 1000
     lon_to_m = lat_to_m * np.cos(np.deg2rad(np.nanmean(ds.latitude.values)))
-    seconds = ds.time.diff(dim='time').values / np.timedelta64(1, 's')
-    speed_x = ds.longitude.diff(dim='time').values * lon_to_m / seconds
-    speed_y = ds.latitude.diff(dim='time').values * lat_to_m / seconds
-    speed = np.sqrt((speed_x ** 2 + speed_y ** 2))
-    for varname in ['longitude', 'latitude']:
-        ds[f'{varname}_qc'].values[:-1][speed > sus_threshold] = 3
-        ds[f'{varname}_qc'].values[1:][speed > sus_threshold] = 3
-        ds[f'{varname}_qc'].values[:-1][speed > threshold] = 4
-        ds[f'{varname}_qc'].values[1:][speed > threshold] = 4
+    seconds = ds.time.diff(dim="time").values / np.timedelta64(1, "s")
+    speed_x = ds.longitude.diff(dim="time").values * lon_to_m / seconds
+    speed_y = ds.latitude.diff(dim="time").values * lat_to_m / seconds
+    speed = np.sqrt(speed_x**2 + speed_y**2)
+    for varname in ["longitude", "latitude"]:
+        ds[f"{varname}_qc"].values[:-1][speed > sus_threshold] = 3
+        ds[f"{varname}_qc"].values[1:][speed > sus_threshold] = 3
+        ds[f"{varname}_qc"].values[:-1][speed > threshold] = 4
+        ds[f"{varname}_qc"].values[1:][speed > threshold] = 4
         dss = ds[varname].copy()
-        dss[ds[f'{varname}_qc']!=1] = np.nan
-        ds[f'{varname}_qc'].values[ds[varname].values < np.nanpercentile(dss, 0.1) - 0.1] = 4
-        ds[f'{varname}_qc'].values[ds[varname].values > np.nanpercentile(dss, 99.9) + 0.1] = 4
+        dss[ds[f"{varname}_qc"] != 1] = np.nan
+        ds[f"{varname}_qc"].values[
+            ds[varname].values < np.nanpercentile(dss, 0.1) - 0.1
+        ] = 4
+        ds[f"{varname}_qc"].values[
+            ds[varname].values > np.nanpercentile(dss, 99.9) + 0.1
+        ] = 4
     return ds
 
 
@@ -98,7 +103,7 @@ def nc_add_sea(nc_path, basin_str, tempfile):
 
 
 def update_ncs(glider, mission, sub_dir):
-    root_dir = f"/data/data_l0_pyglider/{sub_dir}/SEA{str(glider)}/M{str(mission)}"
+    root_dir = f"/data/data_l0_pyglider/{sub_dir}/SEA{glider!s}/M{mission!s}"
     _log.info(f"add basin to ncs in {root_dir}")
     nc_files = []
     for sub in ("profiles", "timeseries", "gridfiles"):
@@ -108,7 +113,7 @@ def update_ncs(glider, mission, sub_dir):
         _log.error(f"no ncs found in path {root_dir}")
     _log.info(f"Found {len(nc_files_flat)}")
     gridfile_dir = pathlib.Path(
-        f"/data/data_l0_pyglider/{sub_dir}/SEA{str(glider)}/M{str(mission)}/gridfiles",
+        f"/data/data_l0_pyglider/{sub_dir}/SEA{glider!s}/M{mission!s}/gridfiles",
     )
     gridfile = list(gridfile_dir.glob("*.nc"))[0]
     basin = get_seas(gridfile)
@@ -238,9 +243,8 @@ def filter_territorial_data(ds):
             continue
         _log.info(f"Flag territorial seas for {var_name}")
         ds[var_name].values[~good_dives] = np.nan
-        ds[var_name].attrs["comment"] = f'{ds[var_name].attrs["comment"]}. {comment}'
+        ds[var_name].attrs["comment"] = f"{ds[var_name].attrs['comment']}. {comment}"
     return ds
-
 
 
 if __name__ == "__main__":
@@ -255,7 +259,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.kind not in ["raw", "sub"]:
         raise ValueError("kind must be raw or sub")
-    logf = f"/data/log/update_meta/SEA{str(args.glider)}_M{str(args.mission)}.log"
+    logf = f"/data/log/update_meta/SEA{args.glider!s}_M{args.mission!s}.log"
     logging.basicConfig(
         filename=logf,
         filemode="w",

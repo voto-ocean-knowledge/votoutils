@@ -1,25 +1,28 @@
+import glob
+import logging
+import subprocess
+
 from votoutils.monitor.office_check_glider_files import (
-    list_missions,
-    skip_projects,
     erddap_download,
     explained_missions,
     good_mission,
+    list_missions,
+    skip_projects,
 )
 from votoutils.upload.sync_functions import sync_script_dir
-import subprocess
-import glob
-import logging
 
 _log = logging.getLogger(__name__)
 
 
 def sync_sailbuoy():
     upload_script = sync_script_dir / "upload_sailbuoy.sh"
-    sailbuoy_missions = glob.glob("/mnt/samba/*/3_Non_Processed/*SB*/SB*M*") + glob.glob("/mnt/samba/*/*/3_Non_Processed/*SB*/SB*M*")
+    sailbuoy_missions = glob.glob(
+        "/mnt/samba/*/3_Non_Processed/*SB*/SB*M*",
+    ) + glob.glob("/mnt/samba/*/*/3_Non_Processed/*SB*/SB*M*")
     for input_dir in sailbuoy_missions:
-        mission_str = input_dir.split('/')[-1]
+        mission_str = input_dir.split("/")[-1]
         _log.info(f"upload sailbuoy mission {mission_str}")
-        platform_serial, mission = mission_str.split('_M')
+        platform_serial, mission = mission_str.split("_M")
         subprocess.check_call(
             [
                 "/usr/bin/bash",
@@ -27,7 +30,7 @@ def sync_sailbuoy():
                 str(platform_serial),
                 str(mission),
                 str(input_dir),
-            ]
+            ],
         )
 
 
@@ -41,6 +44,8 @@ def sync_glider():
             explained=explained_missions,
             upload_script=sync_script_dir / "upload.sh",
         )
+
+
 if __name__ == "__main__":
     logf = "/data/log/office_sync_to_pipeline.log"
     logging.basicConfig(

@@ -1,7 +1,8 @@
-import subprocess
 import logging
-import polars as pl
+import subprocess
 from pathlib import Path
+
+import polars as pl
 
 _log = logging.getLogger(__name__)
 
@@ -44,23 +45,23 @@ def clean_nrt_bad_files(in_dir):
                     out = out.with_columns(pl.col(col_name).cast(pl.Float64))
         except (pl.exceptions.ComputeError, pl.exceptions.InvalidOperationError):
             _log.info(f"Error reading {fn}. Removing whitespace from this file")
-            with open(file_path, 'r') as infile:
+            with open(file_path, "r") as infile:
                 content = infile.read()
-            content = content.replace(' ', '')
-            with open(file_path, 'w') as infile:
+            content = content.replace(" ", "")
+            with open(file_path, "w") as infile:
                 infile.write(content)
             goodlines = []
             with open(file_path) as f:
                 goodline_len = 0
                 i = 0
                 num_semi = 0
-                for line in f.readlines():
+                for line in f:
                     if i > 3:
                         if not num_semi:
-                            num_semi = line.count(';')
+                            num_semi = line.count(";")
                         if line.count("9999.0") < 4 and not goodline_len:
                             goodline_len = len(line)
-                    if line.count(';') < num_semi:
+                    if line.count(";") < num_semi:
                         _log.info(f"MISSING ; in {fn}: {line}")
                         continue
                     if len(line) + 30 < goodline_len:

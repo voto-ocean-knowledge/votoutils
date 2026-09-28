@@ -1,12 +1,18 @@
-from votoutils.monitor.office_check_glider_files import list_missions, skip_projects, explained_missions
+import json
+import logging
 import shutil
 import subprocess
-from pathlib import Path
-import logging
 import tempfile
-import json
-import xarray as xr
+from pathlib import Path
+
 import pandas as pd
+import xarray as xr
+
+from votoutils.monitor.office_check_glider_files import (
+    explained_missions,
+    list_missions,
+    skip_projects,
+)
 from votoutils.upload.sync_functions import sync_script_dir
 from votoutils.utilities.utilities import mailer
 
@@ -19,13 +25,13 @@ with open(secrets_dir / "email_secrets.json") as json_file:
 nortek_jar_path = secrets["nortek_jar_path"]
 
 expected_failures = [
-    ('SEA066', 45),
-    ('SEA068', 45),
-    ('SEA079', 38),
+    ("SEA066", 45),
+    ("SEA068", 45),
+    ("SEA079", 38),
 ]
 
 df = pd.read_csv(
-    "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/ad2cp.csvp?url"
+    "https://erddap.observations.voiceoftheocean.org/erddap/tabledap/ad2cp.csvp?url",
 )
 
 
@@ -63,12 +69,14 @@ def convert_from_ad2cp(dir_in, outfile, reprocess=False):
         if len(tmp_nc) == 1:
             shutil.copy(tmp_nc[0], outfile)
         else:
-            _log.info(f"adcp file has been broken up by NortekExport. Reconstructing {outfile}")
+            _log.info(
+                f"adcp file has been broken up by NortekExport. Reconstructing {outfile}",
+            )
             ADCP = xr.open_mfdataset(f"{tmpdirname}/*.nc", group="Data/Average")
             if "MatlabTimeStamp" in list(ADCP):
                 ADCP = ADCP.drop_vars(["MatlabTimeStamp"])
             combi_file = f"{tmpdirname}/combi.nc"
-            config = xr.open_dataset(tmp_nc[0], group='Config')
+            config = xr.open_dataset(tmp_nc[0], group="Config")
             ADCP.to_netcdf(combi_file, "w", group="Data/Average", format="NETCDF4")
             config.to_netcdf(combi_file, "a", group="Config", format="NETCDF4")
             shutil.copy(combi_file, outfile)
@@ -77,7 +85,8 @@ def convert_from_ad2cp(dir_in, outfile, reprocess=False):
 
 
 def convert_ad2cp_to_nc(
-    mission_dir, upload=True
+    mission_dir,
+    upload=True,
 ):
     _log.debug(f"copy ad2cp data for {mission_dir}")
     if "XXX" in str(mission_dir):
@@ -104,7 +113,9 @@ def convert_ad2cp_to_nc(
     if nc_out_file.exists():
         _log.debug(f"destination file {nc_out_file} already exists")
         req = f"https://erddap.observations.voiceoftheocean.org/erddap/files/ad2cp/{platform_serial}_M{mission}.ad2cp.00000.nc"
-        _log.debug(f"mission {platform_serial} M{mission} in explained missions. skipping")
+        _log.debug(
+            f"mission {platform_serial} M{mission} in explained missions. skipping",
+        )
         if (platform_serial, mission) in explained_missions:
             return
         if req in df.url.values:
@@ -127,7 +138,9 @@ def convert_ad2cp_to_nc(
         mailer("ADCP error", msg)
         _log.error(msg)
         return
-    source_files = list(source_dir.glob(f"*{int(platform_serial[-3:])}*{mission}*ad2cp"))
+    source_files = list(
+        source_dir.glob(f"*{int(platform_serial[-3:])}*{mission}*ad2cp"),
+    )
     if len(source_files) == 0:
         msg = f"no input ad2cp files in {source_dir}"
         mailer("ADCP error", msg)
@@ -169,7 +182,7 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
         handlers=[
             logging.FileHandler("/data/log/ad2cp_to_nc.log"),
-            logging.StreamHandler()
+            logging.StreamHandler(),
         ],
     )
     convert_all_ad2cp()
