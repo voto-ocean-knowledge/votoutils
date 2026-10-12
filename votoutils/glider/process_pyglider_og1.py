@@ -65,22 +65,22 @@ def add_extra_delayed_vars(deployment):
     extras = {
         'ACC_X': {'source': 'AccX',
                   'long_name': 'Acceleration measured along the X-axis',
-                  'units': 'ms-2', },
+                  'units': 'G', },
         'ACC_Y': {'source': 'AccY',
                   'long_name': 'Acceleration measured along the Y-axis',
-                  'units': 'ms-2',},
+                  'units': 'G',},
         'ACC_Z': {'source': 'AccZ',
                   'long_name': 'Acceleration measured along the Z-axis',
-                  'units': 'ms-2',},
+                  'units': 'G',},
         'MAG_X': {'source': 'MagX',
                   'long_name': 'Magnetic field component along the X-axis',
-                  'units': 'ms-2', },
+                  'units': 'µT', },
         'MAG_Y': {'source': 'MagY',
                   'long_name': 'Magnetic field component along the Y-axis',
-                  'units': 'ms-2', },
+                  'units': 'µT', },
         'MAG_Z': {'source': 'MagZ',
                   'long_name': 'Magnetic field component along the Z-axis',
-                  'units': 'ms-2', },
+                  'units': 'µT', },
          'DISTORTION': {'source': 'Distortion',
                         'long_name': 'Measurement of magnetic distortion',
                         'units': 'None',}
@@ -279,9 +279,9 @@ if __name__ == "__main__":
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    glider = "SHW002"
-    mission = 26
-    kind='raw'
+    glider = "SEA063"
+    mission = 97
+    kind='sub'
     if kind == 'raw':
         nc_out = proc_pyglider_og1(f"/data/data_raw/complete_mission/{glider}/M{mission}",
                                    f"/data/data_l0_pyglider/OG_complete_mission/{glider}/M{mission}/",
