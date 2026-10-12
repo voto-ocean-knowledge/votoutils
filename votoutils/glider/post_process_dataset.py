@@ -196,9 +196,9 @@ def fix_specific_mission(ds):
         legato4_fix_version = parse_version('2.26.1')
 
         if pld_version < legato4_fix_version:
-            ds['pressure'].values -= 10
+            ds['pressure'].values -= 10.1325
             ds['depth'].values -= 10
-            ds['pressure'].attrs['comment'] += 'manually corrected for air pressure offset'
+            ds['pressure'].attrs['comment'] += 'manually corrected for air pressure offset of 10.1325 dbar'
             ds['depth'].attrs['comment'] += 'manually corrected for air pressure offset'
 
     match platform_mission:

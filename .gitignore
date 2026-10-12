@@ -11,3 +11,4 @@ votoutils.egg-info/
 votoutils/_version.py
 *.ipynb
 votoutils/alerts/lastcheck_surface.txt
+.venv
