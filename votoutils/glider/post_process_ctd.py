@@ -2,6 +2,8 @@ import gsw
 import numpy as np
 from scipy.interpolate import interp1d
 import logging
+import yaml
+import xarray as xr
 import pandas as pd
 
 _log = logging.getLogger(__name__)
@@ -18,18 +20,22 @@ def salinity_pressure_correction(ds):
     X2 = 1.8e-06
     X3 = -9.472e-10
     X4 = 2.112e-13
-    Cmeas = ds["conductivity"].values
-    Pmeas = ds["pressure"].values
-    ds["conductivity"].values = Cmeas / (1 + X2 * Pmeas + X3 * Pmeas**2 + X4 * Pmeas**3)
-    ds["conductivity"].attrs["comment"] = (
+    Cmeas = ds["CNDC"].values
+    Pmeas = ds["PRES"].values
+    ds["CNDC"].values = Cmeas / (1 + X2 * Pmeas + X3 * Pmeas**2 + X4 * Pmeas**3)
+    ds["CNDC"].attrs["comment"] += (
         "Corrected for pressure lag in post-processing. "
     )
-    ds["salinity"].values = gsw.SP_from_C(
-        ds["conductivity"].values,
-        ds["temperature"].values,
+    psal = gsw.SP_from_C(
+        ds["CNDC"].values,
+        ds["TEMP"].values,
         Pmeas,
     )
-    ds["salinity"].attrs["comment"] = "Corrected for pressure lag in post-processing. "
+
+    ds['PSAL'].values = psal
+    ds["PSAL"].attrs["comment"] += "Corrected for pressure lag in post-processing. "
+    density = gsw.density.rho(ds.PSAL, ds.TEMP, ds.PRES)
+    ds['DENSITY'].values = density
     return ds
 
 
@@ -43,15 +49,15 @@ def correct_rbr_lag(ds):
     Rolf G. Lueck and James J. Picklo https://doi.org/10.1175/1520-0426(1990)007<0756:TIOCCO>2.0.CO;2
     :return:
     """
-    raw_seconds = ds["time"].values - np.nanmin(ds["time"].values)
-    if "float" not in str(ds.time.dtype):
+    raw_seconds = ds["TIME"].values - np.nanmin(ds["TIME"].values)
+    if "float" not in str(ds['TIME'].dtype):
         raw_seconds = raw_seconds / np.timedelta64(1, "s")
     vert_spd = np.gradient(
-        -gsw.z_from_p(ds["pressure"].values, ds["latitude"].values),
+        -gsw.z_from_p(ds["PRES"].values, ds["LATITUDE"].values),
         raw_seconds,
     )
 
-    spd = np.abs(vert_spd / np.sin(np.deg2rad(ds["pitch"].values)))
+    spd = np.abs(vert_spd / np.sin(np.deg2rad(ds["PITCH"].values)))
 
     spd[spd < 0.01] = 0.01
     spd[spd > 1] = 1
@@ -59,7 +65,7 @@ def correct_rbr_lag(ds):
 
     spd = spd * 100
 
-    raw_temp = ds["temperature"].values
+    raw_temp = ds["TEMP"].values
 
     Fs = np.median(1 / np.gradient(raw_seconds))
     if not 0.01 < Fs < 100:
@@ -99,7 +105,7 @@ def correct_rbr_lag(ds):
         bias_long[sample] = -b[sample] * bias_long[sample - 1] + a[sample] * (
             corr_temp[sample] - corr_temp[sample - 1]
         )
-
+    corr_temp = corr_temp.copy()
     # Estimate effective temperature of the conductivity measurement (short thermal lag)
     alpha = 0.23 * spd ** (-0.82)
     tau = 27.15 * spd ** (-0.58)
@@ -112,20 +118,22 @@ def correct_rbr_lag(ds):
         )
 
     corr_sal = gsw.SP_from_C(
-        ds["conductivity"].values,
+        ds["CNDC"].values,
         corr_temp - bias_long - bias_short,
-        ds["pressure"].values,
+        ds["PRES"].values,
     )
-    corr_temp[np.isnan(ds["temperature"].values)] = np.nan
-    corr_sal[np.isnan(ds["salinity"].values)] = np.nan
+    corr_temp[np.isnan(ds["TEMP"].values)] = np.nan
+    corr_sal[np.isnan(ds["PSAL"].values)] = np.nan
 
-    ds["temperature"].values = corr_temp
-    ds["salinity"].values = corr_sal
+    ds["TEMP"].values = corr_temp
+    ds["PSAL"].values = corr_sal
 
-    sa = gsw.SA_from_SP(ds["salinity"], ds["pressure"], ds["longitude"], ds["latitude"])
-    ct = gsw.CT_from_t(sa, ds["temperature"], ds["pressure"])
-    ds["potential_density"].values = 1000 + gsw.density.sigma0(sa, ct)
-    ds["density"].values = gsw.density.rho(ds.salinity, ds.temperature, ds.pressure)
+    sa = gsw.SA_from_SP(ds["PSAL"], ds["PRES"], ds["LONGITUDE"], ds["LATITUDE"])
+    ct = gsw.CT_from_t(sa, ds["TEMP"], ds["PRES"])
+    potential_density = 1000 + gsw.density.sigma0(sa, ct)
+    ds['potential_density'] = xr.DataArray(potential_density, dims=ds['TEMP'].dims, attrs={'standard_name': 'sea_water_potential_density'})
+
+    ds["DENSITY"].values = gsw.density.rho(ds.PSAL, ds.TEMP, ds.PRES)
     rbr_str = (
         "Corrected following Thermal lag from Thermal Inertia of Conductivity Cells: Observations with a "
         "Sea-Bird Cell Rolf G. Lueck and James J. Picklo"
@@ -134,9 +142,9 @@ def correct_rbr_lag(ds):
         " (accepted). Static and dynamic performance of the RBRargo3 CTD."
         " Journal of Atmospheric and Oceanic Technology."
     )
-    ds["density"].attrs["comment"] = 'In-situ density. ' + rbr_str
-    ds["temperature"].attrs["comment"] += rbr_str
-    ds["salinity"].attrs["comment"] += rbr_str
+    ds["DENSITY"].attrs["comment"] = 'In-situ density. ' + rbr_str
+    ds["TEMP"].attrs["comment"] += rbr_str
+    ds["PSAL"].attrs["comment"] += rbr_str
     return ds
 
 

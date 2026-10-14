@@ -30,34 +30,34 @@ def nmea2deg(nmea):
 
 def get_seas(gridfile):
     ds = xr.open_dataset(gridfile)
-    lon = ds.longitude
-    lat = ds.latitude
+    lon = ds.LONGITUDE
+    lat = ds.LATITUDE
     return locs_to_seas(lon, lat)
 
 
 def nan_bad_locations(ds, max_flag=3):
-    ds["longitude"][ds["longitude_qc"] > max_flag] = np.nan
-    ds["latitude"][ds["latitude_qc"] > max_flag] = np.nan
+    ds["LONGITUDE"][ds["LONGITUDE_QC"] > max_flag] = np.nan
+    ds["LATITUDE"][ds["LATITUDE_QC"] > max_flag] = np.nan
     return ds
 
 
 def flag_bad_locations(ds, threshold = 1, sus_threshold=0.6):
     # threshold is max speed in m/s
     lat_to_m = 111 * 1000
-    lon_to_m = lat_to_m * np.cos(np.deg2rad(np.nanmean(ds.latitude.values)))
-    seconds = ds.time.diff(dim='time').values / np.timedelta64(1, 's')
-    speed_x = ds.longitude.diff(dim='time').values * lon_to_m / seconds
-    speed_y = ds.latitude.diff(dim='time').values * lat_to_m / seconds
+    lon_to_m = lat_to_m * np.cos(np.deg2rad(np.nanmean(ds.LATITUDE.values)))
+    seconds = ds.TIME.diff(dim='N_MEASUREMENTS').values / np.timedelta64(1, 's')
+    speed_x = ds.LONGITUDE.diff(dim='N_MEASUREMENTS').values * lon_to_m / seconds
+    speed_y = ds.LATITUDE.diff(dim='N_MEASUREMENTS').values * lat_to_m / seconds
     speed = np.sqrt((speed_x ** 2 + speed_y ** 2))
-    for varname in ['longitude', 'latitude']:
-        ds[f'{varname}_qc'].values[:-1][speed > sus_threshold] = 3
-        ds[f'{varname}_qc'].values[1:][speed > sus_threshold] = 3
-        ds[f'{varname}_qc'].values[:-1][speed > threshold] = 4
-        ds[f'{varname}_qc'].values[1:][speed > threshold] = 4
+    for varname in ['LONGITUDE', 'LATITUDE']:
+        ds[f'{varname}_QC'].values[:-1][speed > sus_threshold] = 3
+        ds[f'{varname}_QC'].values[1:][speed > sus_threshold] = 3
+        ds[f'{varname}_QC'].values[:-1][speed > threshold] = 4
+        ds[f'{varname}_QC'].values[1:][speed > threshold] = 4
         dss = ds[varname].copy()
-        dss[ds[f'{varname}_qc']!=1] = np.nan
-        ds[f'{varname}_qc'].values[ds[varname].values < np.nanpercentile(dss, 0.1) - 0.1] = 4
-        ds[f'{varname}_qc'].values[ds[varname].values > np.nanpercentile(dss, 99.9) + 0.1] = 4
+        dss[ds[f'{varname}_QC']!=1] = np.nan
+        ds[f'{varname}_QC'].values[ds[varname].values < np.nanpercentile(dss, 0.1) - 0.1] = 4
+        ds[f'{varname}_QC'].values[ds[varname].values > np.nanpercentile(dss, 99.9) + 0.1] = 4
     return ds
 
 
@@ -132,11 +132,11 @@ def geocode_by_dives(ds):
     df_12nm_extend["geometry"] = df_12nm_extend.geometry.buffer(buffer_length_in_meters)
     df_12nm_extend_in = df_12nm_extend.to_crs(epsg=4326)
     # Create minimal dataset and group it by dives
-    ds = ds[["longitude", "latitude", "dive_num"]]
-    df_glider = ds.to_pandas().groupby("dive_num").mean()
+    ds = ds[["LONGITUDE", "LATITUDE", "DIVE_NUMBER"]]
+    df_glider = ds.to_pandas().groupby("DIVE_NUMBER").mean()
     df_glider = gp.GeoDataFrame(
         df_glider,
-        geometry=gp.points_from_xy(df_glider.longitude, df_glider.latitude),
+        geometry=gp.points_from_xy(df_glider.LONGITUDE, df_glider.LATITUDE),
     )
     # Align crs and check which dives fall within Swedish 12 nm waters and helcom polygons
     df_glider = df_glider.set_crs(epsg=4326)
@@ -147,13 +147,13 @@ def geocode_by_dives(ds):
     df_12nm_extend = df_12nm_extend_in.to_crs(df_glider.crs)
     df_12nm_extend = gp.sjoin(df_12nm_extend, df_glider, predicate="contains")
     df_glider.index.rename("index", inplace=True)
-    df_glider["dive_num"] = df_glider.index
-    df_12nm_id = df_12nm[["dive_num", "sovereign1"]]
-    df_helcom_id = df_helcom[["dive_num", "Name"]]
-    df_12nm_extend_id = df_12nm_extend[["dive_num", "sovereign1"]]
+    df_glider["DIVE_NUMBER"] = df_glider.index
+    df_12nm_id = df_12nm[["DIVE_NUMBER", "sovereign1"]]
+    df_helcom_id = df_helcom[["DIVE_NUMBER", "Name"]]
+    df_12nm_extend_id = df_12nm_extend[["DIVE_NUMBER", "sovereign1"]]
     df_12nm_extend_id = df_12nm_extend_id.rename(
         columns={
-            "dive_num": "dive_num_extend",
+            "DIVE_NUMBER": "DIVE_NUMBER_extend",
             "sovereign1": "sovereign1_extend",
         },
     )
@@ -161,27 +161,27 @@ def geocode_by_dives(ds):
     df_glider = pd.merge(
         df_glider,
         df_12nm_id,
-        left_on="dive_num",
-        right_on="dive_num",
+        left_on="DIVE_NUMBER",
+        right_on="DIVE_NUMBER",
         how="left",
     )
     df_glider = pd.merge(
         df_glider,
         df_helcom_id,
-        left_on="dive_num",
-        right_on="dive_num",
+        left_on="DIVE_NUMBER",
+        right_on="DIVE_NUMBER",
         how="left",
     )
     df_glider = pd.merge(
         df_glider,
         df_12nm_extend_id,
-        left_on="dive_num",
-        right_on="dive_num_extend",
+        left_on="DIVE_NUMBER",
+        right_on="DIVE_NUMBER_extend",
         how="left",
     )
-    assert not (df_glider.dive_num - df_glider.dive_num_extend).any()
+    assert not (df_glider.DIVE_NUMBER - df_glider.DIVE_NUMBER_extend).any()
     # clean up dataframe before returning
-    df_glider.drop(["dive_num_extend"], axis=1, inplace=True)
+    df_glider.drop(["DIVE_NUMBER_extend"], axis=1, inplace=True)
     df_glider.rename(columns={"Name": "basin"}, inplace=True)
     df_glider.loc[df_glider.sovereign1 != "Sweden", "sovereign1"] = (
         "International waters"
@@ -195,11 +195,11 @@ def geocode_by_dives(ds):
 def identify_territorial_dives(ds, df_geocode):
     international_dives = df_geocode.loc[
         df_geocode.sovereign1_extend == "International waters",
-        "dive_num",
+        "DIVE_NUMBER",
     ]
-    good_dives = np.empty((np.size(ds.dive_num.values)), dtype=bool)
+    good_dives = np.empty((np.size(ds.DIVE_NUMBER.values)), dtype=bool)
     good_dives[:] = False
-    good_dives[np.isin(ds.dive_num, international_dives)] = True
+    good_dives[np.isin(ds.DIVE_NUMBER, international_dives)] = True
     return good_dives
 
 
