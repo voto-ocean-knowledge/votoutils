@@ -10,14 +10,14 @@ import logging
 
 _log = logging.getLogger(__name__)
 
-cond_temp_vars = ["potential_density", "density", "potential_temperature"]
+cond_temp_vars = ["potential_density", "DENSITY", "potential_temperature"]
 location_bbox_baltic = [7, 53, 26, 65]
 
 
 def get_configs():
     configs = {
-        "pressure": {
-            "pressure": {
+        "PRES": {
+            "PRES": {
                 "qartod": {
                     "gross_range_test": {
                         "suspect_span": [0, 2000],
@@ -27,8 +27,8 @@ def get_configs():
                 },
             },
         },
-        "depth": {
-            "depth": {
+        "DEPTH": {
+            "DEPTH": {
                 "qartod": {
                     "gross_range_test": {
                         "suspect_span": [0, 2000],
@@ -38,8 +38,8 @@ def get_configs():
                 },
             },
         },
-        "temperature": {
-            "temperature": {
+        "TEMP": {
+            "TEMP": {
                 "qartod": {
                     "gross_range_test": {
                         "suspect_span": [0, 30],
@@ -49,28 +49,28 @@ def get_configs():
                 },
             },
         },
-        "salinity": {
-            "conductivity": {
+        "PSAL": {
+            "CNDC": {
                 "qartod": {
                     "gross_range_test": {"suspect_span": [5, 45], "fail_span": [2, 50]},
                 },
             },
-            "salinity": {
+            "PSAL": {
                 "qartod": {
                     "gross_range_test": {"suspect_span": [5, 38], "fail_span": [2, 41]},
                     "spike_test": {"suspect_threshold": 0.3, "fail_threshold": 0.9},
                 },
             },
         },
-        "conductivity": {
-            "conductivity": {
+        "CNDC": {
+            "CNDC": {
                 "qartod": {
                     "gross_range_test": {"suspect_span": [5, 45], "fail_span": [2, 50]},
                 },
             },
         },
-        "oxygen_concentration": {
-            "oxygen_concentration": {
+        "DOXY": {
+            "DOXY": {
                 "qartod": {
                     "gross_range_test": {
                         "suspect_span": [0, 470],
@@ -80,8 +80,8 @@ def get_configs():
                 },
             },
         },
-        "chlorophyll": {
-            "chlorophyll": {
+        "CHLA": {
+            "CHLA": {
                 "qartod": {
                     "gross_range_test": {
                         "suspect_span": [0, 15],
@@ -91,8 +91,8 @@ def get_configs():
                 },
             },
         },
-        "longitude": {
-            "latitude": {
+        "LONGITUDE": {
+            "LATITUDE": {
                 "qartod": {
                     "spike_test": {
                         "suspect_threshold": 0.0001,
@@ -100,7 +100,7 @@ def get_configs():
                     },
                 },
             },
-            "longitude": {
+            "LONGITUDE": {
                 "qartod": {
                     "spike_test": {
                         "suspect_threshold": 0.0001,
@@ -109,8 +109,8 @@ def get_configs():
                 },
             },
         },
-        "latitude": {
-            "latitude": {
+        "LATITUDE": {
+            "LATITUDE": {
                 "qartod": {
                     "spike_test": {
                         "suspect_threshold": 0.0001,
@@ -118,7 +118,7 @@ def get_configs():
                     },
                 },
             },
-            "longitude": {
+            "LONGITUDE": {
                 "qartod": {
                     "spike_test": {
                         "suspect_threshold": 0.0001,
@@ -133,7 +133,7 @@ def get_configs():
 
 def derive_configs(configs):
     for var in cond_temp_vars:
-        configs[var] = {**configs["temperature"], **configs["salinity"]}
+        configs[var] = {**configs["TEMP"], **configs["PSAL"]}
     return configs
 
 
@@ -142,7 +142,7 @@ def apply_ioos_flags(ds, config):
         _log.warning(f"{ds.keys} not found in dataset. Skipping")
         return None, None
     c = Config(config)
-    qc = XarrayStream(ds, lon="longitude", lat="latitude")
+    qc = XarrayStream(ds, lon="LONGITUDE", lat="LATITUDE")
     runner = list(qc.run(c))
     results = collect_results(runner, how="list")
     agg = CollectedResult(
@@ -151,7 +151,7 @@ def apply_ioos_flags(ds, config):
         test="qc_rollup",
         function=aggregate,
         results=aggregate(results),
-        tinp=qc.time(),
+        tinp='TIME',
         data=ds,
     )
     flag_vals = agg.results
@@ -159,19 +159,25 @@ def apply_ioos_flags(ds, config):
     proc_record = str(call)
     return flag_vals, proc_record
 
-def flag_ioos(ds, baltic=True):
-    if ds.attrs['sea_name'].lower != 'baltic':
+def flag_ioos(ds):
+    lon_mean = np.nanmean(ds.LONGITUDE.values)
+    lat_mean = np.nanmean(ds.LATITUDE.values)
+    bbox = location_bbox_baltic
+    if bbox[1] < lat_mean < bbox[3] and bbox[0] < lon_mean < bbox[2]:
+        baltic = True
+    else :
         baltic = False
+
     configs = get_configs()
     if baltic:
         for config_name, config in configs.items():
             config[config_name]['qartod']['location_test'] = {'bbox': location_bbox_baltic}
     else:
-        configs['conductivity']['conductivity']['qartod'] = {"gross_range_test": {"suspect_span": [5, 60], "fail_span": [2, 65]}}
-        configs['salinity']['conductivity']['qartod'] = {"gross_range_test": {"suspect_span": [5, 60], "fail_span": [2, 65]}}
+        configs['CNDC']['CNDC']['qartod'] = {"gross_range_test": {"suspect_span": [5, 60], "fail_span": [2, 65]}}
+        configs['PSAL']['CNDC']['qartod'] = {"gross_range_test": {"suspect_span": [5, 60], "fail_span": [2, 65]}}
     # If the glider has a GPCTD, use this for the salinity config
-    if ds["conductivity"].attrs["units"] == "S m-1":
-        configs["salinity"]["conductivity"]["qartod"]["gross_range_test"] = {
+    if ds["CNDC"].attrs["units"] == "S m-1":
+        configs["PSAL"]["CNDC"]["qartod"]["gross_range_test"] = {
             "suspect_span": [0.6, 4.2],
             "fail_span": [0.3, 4.5],
         }
@@ -190,9 +196,9 @@ def flag_ioos(ds, baltic=True):
             f"{ioos_qc.__version__}. Using config: {comment}."
         )
         if (
-            "temperature" in config.keys()
-            or "salinity" in config.keys()
-            or "conductivity" in config.keys()
+            "TEMP" in config.keys()
+            or "PSAL" in config.keys()
+            or "CNDC" in config.keys()
         ):
             ioos_comment = (
                 f"{ioos_comment}  Threshold values from EuroGOOS DATA-MEQ Working Group (2010)"
@@ -212,35 +218,32 @@ def flag_ioos(ds, baltic=True):
             "flag_values": [1, 2, 3, 4, 9],
             "flag_meanings": "GOOD, UNKNOWN, SUSPECT, FAIL, MISSING",
             "long_name": f"quality control flags for {parent_attrs['long_name']}",
-            "standard_name": f"{parent_attrs['standard_name']}_flag",
             "comment": ioos_comment,
         }
-        ds[f"{config_name}_qc"] = flag
+        ds[f"{config_name}_QC"] = flag
     return ds
 
 
 def flag_oxygen(ds):
-    if 'oxygen' not in list(ds):
+    if 'DOXY' not in list(ds):
         return ds
-    oxy_meta_str = ds.oxygen
-    import ast
-
-    oxy_meta = ast.literal_eval(oxy_meta_str)
-    cal_date = datetime.date.fromisoformat(oxy_meta["calibration_date"])
-    if "coda" in oxy_meta["make_model"] and cal_date < datetime.date(2022, 12, 30):
+    oxy_sensor = ds['DOXY'].attrs['sensor']
+    oxy_meta = ds[oxy_sensor].attrs
+    cal_date = datetime.date.fromisoformat(oxy_meta["sensor_calibration_date"])
+    if "coda" in oxy_meta["sensor_model"].lower() and cal_date < datetime.date(2022, 12, 30):
         # These early batches of codas were improperly calibrated
         _log.info("bad legato")
-        pre_flags = ds["oxygen_concentration_qc"].values
+        pre_flags = ds["DOXY_QC"].values
         sus_flags = np.ones(len(pre_flags), dtype=int) * 3
-        ds["oxygen_concentration_qc"].values = np.maximum(pre_flags, sus_flags)
-        original_comment = ds["oxygen_concentration_qc"].attrs["comment"]
+        ds["DOXY_QC"].values = np.maximum(pre_flags, sus_flags)
+        original_comment = ds["DOXY_QC"].attrs["comment"]
         bad_oxy_comment = (
             "Oxygen optode improperly calibrated during this deployment. All flags set to minimum value"
             " of 3 (SUSPECT). Data may be recoverable. "
         )
         comment = f"{bad_oxy_comment} {original_comment}"
-        ds["oxygen_concentration_qc"].attrs["comment"] = comment
-        ds["oxygen_concentration_qc"].attrs["quality_control_set"] = 1
+        ds["DOXY_QC"].attrs["comment"] = comment
+        ds["DOXY_QC"].attrs["quality_control_set"] = 1
     return ds
 
 
@@ -248,20 +251,22 @@ def flag_pilot(ds):
     attrs = ds.attrs
     platform_serial = attrs["glider_serial"]
     mission = attrs["deployment_id"]
-    mission_yaml = f"/data/deployment_yaml/mission_yaml/{platform_serial}_M{mission}.yml"
+    mission_yaml = f"/data/deployment_yaml/og1/{platform_serial}_M{mission}.yaml"
     with open(mission_yaml) as fin:
         deployment = yaml.safe_load(fin)
     if "qc" not in deployment.keys():
         return ds
-    # If temperature or conductivity flagged, add qc entries for vars derived from conductivity/temperature
-    if "temperature" in deployment["qc"]:
+    # If temperature or conductivity flagged, add qc entries for vars derived from conductivity/TEMP
+    if "TEMP" in deployment["qc"]:
         for ct_var in cond_temp_vars:
-            deployment["qc"][ct_var] = deployment["qc"]["temperature"]
-    elif "conductivity" in deployment["qc"]:
+            if ct_var in list(ds):
+                deployment["qc"][ct_var] = deployment["qc"]["TEMP"]
+    elif "CNDC" in deployment["qc"]:
         for ct_var in cond_temp_vars:
-            deployment["qc"][ct_var] = deployment["qc"]["conductivity"]
+            if ct_var in list(ds):
+                deployment["qc"][ct_var] = deployment["qc"]["CNDC"]
     for variable in deployment["qc"]:
-        if f"{variable}_qc" not in list(ds):
+        if f"{variable}_QC" not in list(ds):
             _log.warning(
                 f"{variable} in yaml qc section, but has no qc from IOOS. Applying minimum qc",
             )
@@ -276,28 +281,27 @@ def flag_pilot(ds):
                 "flag_values": [1, 2, 3, 4, 9],
                 "flag_meanings": "GOOD, UNKNOWN, SUSPECT, FAIL, MISSING",
                 "long_name": f"quality control flags for {parent_attrs['long_name']}",
-                "standard_name": f"{parent_attrs['standard_name']}_flag",
                 "comment": "no automated QC applied",
             }
-            ds[f"{variable}_qc"] = flag
+            ds[f"{variable}_QC"] = flag
         pilot_qc = deployment["qc"][variable]
-        var_qc = ds[f"{variable}_qc"]
+        var_qc = ds[f"{variable}_QC"]
         time_str = ""
         if "start" in pilot_qc.keys():
             start_str = pilot_qc["start"]
             start = np.datetime64(start_str)
             time_str = f"start: {start_str}"
         else:
-            start = np.nanmin(ds.time)
+            start = np.nanmin(ds.TIME)
         if "end" in pilot_qc.keys():
             end_str = pilot_qc["end"]
             end = np.datetime64(end_str)
             time_str = f"{time_str}, end: {end_str}"
         else:
-            end = np.nanmax(ds.time)
-        var_qc_timesub = var_qc.values[np.logical_and(ds.time >= start, ds.time <= end)]
+            end = np.nanmax(ds.TIME)
+        var_qc_timesub = var_qc.values[np.logical_and(ds.TIME >= start, ds.TIME <= end)]
         var_qc_timesub[var_qc_timesub < pilot_qc["value"]] = pilot_qc["value"]
-        var_qc.values[np.logical_and(ds.time >= start, ds.time <= end)] = var_qc_timesub
+        var_qc.values[np.logical_and(ds.TIME >= start, ds.TIME <= end)] = var_qc_timesub
         original_comment = var_qc.attrs["comment"]
         pilot_comment = pilot_qc["comment"]
         comment = f"Pilot QC: {pilot_comment} {time_str}. Minimum QC value set to {pilot_qc['value']}. IOOS_QC: {original_comment}"
