@@ -148,7 +148,7 @@ def proc_pyglider_og1(input_dir, output_dir, yaml_file, kind, reprocess=False):
     # OG1 add some metadata attributes for OG1-pyglider compatability
     postscript = 'R'
     if kind == 'raw':
-        postscript = "delayed"
+        postscript = "D"
 
     nav_file = list(Path(rawncdir).glob('*rawgli*'))[0]
     nav_df = pl.read_parquet(nav_file)

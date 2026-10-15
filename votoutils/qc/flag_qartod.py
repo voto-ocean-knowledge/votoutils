@@ -259,10 +259,12 @@ def flag_pilot(ds):
     # If temperature or conductivity flagged, add qc entries for vars derived from conductivity/TEMP
     if "TEMP" in deployment["qc"]:
         for ct_var in cond_temp_vars:
-            deployment["qc"][ct_var] = deployment["qc"]["TEMP"]
+            if ct_var in list(ds):
+                deployment["qc"][ct_var] = deployment["qc"]["TEMP"]
     elif "CNDC" in deployment["qc"]:
         for ct_var in cond_temp_vars:
-            deployment["qc"][ct_var] = deployment["qc"]["CNDC"]
+            if ct_var in list(ds):
+                deployment["qc"][ct_var] = deployment["qc"]["CNDC"]
     for variable in deployment["qc"]:
         if f"{variable}_QC" not in list(ds):
             _log.warning(
