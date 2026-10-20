@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 from votoutils.upload.sync_functions import sync_script_dir
 from votoutils.glider.process_pyglider_og1 import proc_pyglider_og1
-from votoutils.glider.post_process_dataset import post_process
+from votoutils.glider.post_process_dataset import post_process, remove_gps_jammed_cycles
 from votoutils.utilities.geocode import get_seas_merged_nav_nc
 from votoutils.utilities.utilities import encode_times
 from votoutils.utilities import database
@@ -63,6 +63,7 @@ def add_voto_stuff(outname):
     out_path = Path(outname)
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     ds = xr.open_dataset(outname, decode_times=coder)
+    ds = remove_gps_jammed_cycles(ds)
     attrs = ds.attrs
     # OG1 VOTO specific
     timeseries_dir = out_path.parent

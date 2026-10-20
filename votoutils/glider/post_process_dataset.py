@@ -23,6 +23,20 @@ jammed_missions = [("SEA044", 106),
                    ("SHW002", 26),
                    ]
 
+jammmed_cycles = {'SHW003_M13': [2365, 2367, 2368]}
+
+def remove_gps_jammed_cycles(ds):
+    dataset_id = ds.attrs['platform_serial_number'] + '_M' + str(ds.attrs['deployment_id'])
+    if dataset_id not in jammmed_cycles.keys():
+        return ds
+    bad_cycles = jammmed_cycles[dataset_id]
+    good_points = np.empty(len(ds.N_MEASUREMENTS), dtype=bool)
+    good_points[:] = True
+    for cycle in bad_cycles:
+        good_points[ds['DIVE_NUMBER']==cycle] = False
+    ds = ds.isel(N_MEASUREMENTS=good_points)
+    return ds
+
 def calculate_bbp(ds, beam_angle=117):
     # https://oceanobservatories.org/wp-content/uploads/2015/10/1341-00540_Data_Product_SPEC_FLUBSCT_OOI.pdf
     _log.info("processing backscatter")
