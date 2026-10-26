@@ -239,6 +239,7 @@ def add_derived_variables(ds):
     with open("/data/ocean-gliders-format-vocabularies/yaml/validated_yaml/og1_variables.yaml") as fin:
         og1_vars = yaml.safe_load(fin)
     ds['PSAL'] = xr.DataArray(psal, dims=ds['TEMP'].dims, attrs=og1_vars['PSAL'])
+    ds['PSAL'].attrs['sensor'] = ds['TEMP'].attrs['sensor']
     density = gsw.density.rho(ds.PSAL, ds.TEMP, ds.PRES)
     ds['DENSITY'] = xr.DataArray(density, dims=ds['TEMP'].dims, attrs=og1_vars['DENSITY'])
     return ds
