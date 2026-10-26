@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 from votoutils.upload.sync_functions import sync_script_dir
 from votoutils.glider.process_pyglider_og1 import proc_pyglider_og1
+from votoutils.glider.post_process_dataset import post_process, remove_gps_jammed_cycles
 from votoutils.utilities.geocode import get_seas_merged_nav_nc
 from votoutils.utilities.utilities import encode_times
 from votoutils.utilities import database
@@ -62,6 +63,7 @@ def add_voto_stuff(outname):
     out_path = Path(outname)
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     ds = xr.open_dataset(outname, decode_times=coder)
+    ds = remove_gps_jammed_cycles(ds)
     attrs = ds.attrs
     # OG1 VOTO specific
     timeseries_dir = out_path.parent
@@ -92,6 +94,7 @@ def add_voto_stuff(outname):
     outpath_voto = out_path.parent / outname_voto
     drop_vars = {'profile_index', 'profile_direction'}.intersection(set(ds.data_vars))
     ds = ds.drop_vars(drop_vars)
+    ds = post_process(ds)
     ds = encode_times(ds)
     ds.to_netcdf(outpath_voto)
     ds.close()
@@ -109,9 +112,9 @@ def proc_one():
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    glider="SEA045"
-    mission = 37
-    kind='nrt'
+    glider="SHW002"
+    mission = 26
+    kind='raw'
     if kind =='raw':
         nc_out = proc_pyglider_og1(f"/data/data_raw/complete_mission/{glider}/M{mission}/",
                                    f"/data/data_l0_pyglider/OG_delayed/{glider}/M{mission}/",
@@ -180,6 +183,6 @@ def proc_all(kind='nrt'):
 
 
 if __name__ == "__main__":
-    #proc_one()
+    proc_one()
     #add_voto_stuff("/data/data_l0_pyglider/OG_nrt/SEA069/M48/timeseries/mission_timeseries_VOTO.nc")
-    proc_all()
+    #proc_all()
