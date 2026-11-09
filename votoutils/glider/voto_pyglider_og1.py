@@ -80,17 +80,21 @@ def add_voto_stuff(outname):
     dataset_type = "nrt" if 'nrt' in str(outname) else "delayed"
     glider_serial = ds.attrs['platform_serial_number']
     deployment_id = ds.attrs['deployment_id']
-    dataset_id = (
+    ds_id = ds.attrs['id']
+    voto_dataset_id = (
         f"{dataset_type}_{glider_serial}_M{deployment_id}"
     )
-    attrs["dataset_id"] = dataset_id
+    attrs["dataset_id"] = voto_dataset_id
     attrs["data_url"] = f"https://erddap.observations.voiceoftheocean.org/erddap/tabledap/{attrs['dataset_id']}"
     attrs["variables"] = list(ds.variables)
     attrs["glider_serial"] = glider_serial
-    attrs['title'] = f'{dataset_id} {glider_serial}_M{deployment_id} {attrs["glider_name"]}'
+    attrs['title'] = f'{ds_id} M{deployment_id} {attrs["glider_name"]}'
     attrs['institution'] = 'VOTO'
+    # TODO the following properly from yaml
+    attrs['contributor_name'] = 'Callum Rollo, Louise Biddle, Olle Glader, Aleksandra Mazur, Marcus Melin, Gunnar Johnsson, Andrew Birkett, Michaela Edwinson, Anna Willstrand Wranne,Adele Maciute, Martin Mohrmann'
+    attrs['contributor_role'] = 'Data Processor, PI, Head of Operations, Glider Technician, Glider Technician, Glider Technician, Glider Technician, Platform Coordinator, Project Manager, Glider Technician, Scientific Data Analyst'
     ds.attrs = attrs
-    outname_voto = f"{ds.attrs['id']}.nc"
+    outname_voto = f"{ds_id}.nc"
     outpath_voto = out_path.parent / outname_voto
     drop_vars = {'profile_index', 'profile_direction'}.intersection(set(ds.data_vars))
     ds = ds.drop_vars(drop_vars)
