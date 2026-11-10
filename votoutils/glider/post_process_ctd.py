@@ -49,6 +49,12 @@ def correct_rbr_lag(ds):
     Rolf G. Lueck and James J. Picklo https://doi.org/10.1175/1520-0426(1990)007<0756:TIOCCO>2.0.CO;2
     :return:
     """
+    sa = gsw.SA_from_SP(ds["PSAL"], ds["PRES"], ds["LONGITUDE"], ds["LATITUDE"])
+    ct = gsw.CT_from_t(sa, ds["TEMP"], ds["PRES"])
+    potential_density = 1000 + gsw.density.sigma0(sa, ct)
+    ds['potential_density'] = xr.DataArray(potential_density, dims=ds['TEMP'].dims,
+                                                attrs={'standard_name': 'sea_water_potential_density'})
+
     raw_seconds = ds["TIME"].values - np.nanmin(ds["TIME"].values)
     if "float" not in str(ds['TIME'].dtype):
         raw_seconds = raw_seconds / np.timedelta64(1, "s")

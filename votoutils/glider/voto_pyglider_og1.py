@@ -134,6 +134,18 @@ def proc_one():
     if not nc_out:
         return
     add_voto_stuff(nc_out)
+    send_kind = 'nrt'
+    if kind == 'delayed':
+        send_kind = 'complete'
+    subprocess.check_call(
+        [
+            "/usr/bin/bash",
+            sync_script_dir / "send_to_erddap_og.sh",
+            str(glider),
+            str(mission),
+            send_kind
+        ],
+    )
 
 def proc_all(kind='nrt'):
     cutoff = datetime.datetime.now() - datetime.timedelta(days=7)
@@ -174,15 +186,18 @@ def proc_all(kind='nrt'):
         if not nc_out:
             continue
         add_voto_stuff(nc_out)
+        send_kind = 'nrt'
         if kind=='delayed':
-            subprocess.check_call(
-                [
-                    "/usr/bin/bash",
-                    sync_script_dir / "send_to_erddap_og_delayed.sh",
-                    str(glider),
-                    str(mission),
-                ],
-            )
+            send_kind = 'complete'
+        subprocess.check_call(
+            [
+                "/usr/bin/bash",
+                sync_script_dir / "send_to_erddap_og.sh",
+                str(glider),
+                str(mission),
+                send_kind
+            ],
+        )
         database.update_processed_time(mission_id, datetime.datetime.now())
 
 
