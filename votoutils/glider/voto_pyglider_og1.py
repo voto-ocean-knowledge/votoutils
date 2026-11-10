@@ -163,7 +163,7 @@ def proc_all(kind='nrt'):
 
     for yml_file in mission_yamls:
         fn = yml_file.name.split('.')[0]
-        skips = ["SEA076_M9", "SEA076_M8", "SEA076_M48"]
+        skips = ["SEA076_M9", "SEA076_M8", "SEA076_M48", "SEA057_M75"]
         if fn in skips:
             _log.error(f"skip {fn} for now")
             continue
