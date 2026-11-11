@@ -5,6 +5,8 @@ import xarray as xr
 import logging
 from pathlib import Path
 import subprocess
+import glob
+import pandas as pd
 import argparse
 from votoutils.upload.sync_functions import sync_script_dir
 from votoutils.glider.process_pyglider_og1 import proc_pyglider_og1
@@ -12,6 +14,7 @@ from votoutils.glider.post_process_dataset import post_process, remove_gps_jamme
 from votoutils.utilities.geocode import get_seas_merged_nav_nc
 from votoutils.utilities.utilities import encode_times
 from votoutils.utilities import database
+from votoutils.utilities.utilities import natural_sort, platforms_no_proc, missions_no_proc
 _log = logging.getLogger(__name__)
 
 
@@ -109,21 +112,12 @@ def add_voto_stuff(outname):
 
 
 def proc_one(glider, mission, kind):
-    logf = "/data/log/pyglider_og1.log"
-    logging.basicConfig(
-        filename=logf,
-        filemode="a",
-        format="%(asctime)s %(levelname)-8s %(message)s",
-        level=logging.INFO,
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
     if kind =='raw':
         nc_out = proc_pyglider_og1(f"/data/data_raw/complete_mission/{glider}/M{mission}/",
                                    f"/data/data_l0_pyglider/OG_delayed/{glider}/M{mission}/",
                                    f"/data/deployment_yaml/og1/{glider}_M{str(mission)}.yaml",
                                    'raw', reprocess=True)
     else:
-
         nc_out = proc_pyglider_og1(f"/data/data_raw/nrt/{glider}/{str(mission).zfill(6)}/C-Csv",
                                    f"/data/data_l0_pyglider/OG_nrt/{glider}/M{mission}/",
                                    #f"/data/deployment_yaml/mission_yaml/OG_{glider}_M{str(mission)}.yml",
@@ -199,21 +193,82 @@ def proc_all(kind='nrt', days=7):
         database.update_processed_time(mission_id, datetime.datetime.now())
 
 
+def process_new_nrt():
+    logging.basicConfig(
+        filename="/data/log/og1_pyglider_pipeline.log",
+        filemode="a",
+        format="%(asctime)s %(levelname)-8s %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    _log.info("Start nrt processing")
+    all_glider_paths = Path("/data/data_raw/nrt").glob("*")
+    for glider_path in all_glider_paths:
+        platform_serial = str(glider_path.parts[-1])
+        if platform_serial in platforms_no_proc:
+            _log.info(f"{platform_serial} is not to be processed. Skipping")
+            continue
+        _log.info(f"Checking {platform_serial}")
+        mission_paths = list(glider_path.glob("00*/C-Csv"))
+        if not mission_paths:
+            _log.warning(f"No missions found for {platform_serial}. Skipping")
+            continue
+        mission_paths.sort()
+        mission = str(mission_paths[-1].parts[-2]).lstrip("0")
+        if (platform_serial, int(mission)) in missions_no_proc:
+            _log.info(f"Will not process {platform_serial}, M{mission} as it is in missions_no_proc")
+            continue
+        _log.info(f"Checking {platform_serial} M{mission}")
+        input_dir = f"/data/data_raw/nrt/{platform_serial}/{mission.zfill(6)}/C-Csv/"
+        mission_id = f'OG_nrt_{platform_serial}_M{mission}'
+        last_proc = database.last_processed_time(mission_id)
+        max_time = np.datetime64(last_proc)
+        in_files = natural_sort(glob.glob(f"{input_dir}*gli*"))
+        if len(in_files) == 0:
+            _log.info(f"no input gli files for {input_dir}. Skipping")
+            continue
+        max_dive_file = in_files[-1]
+        try:
+            df = pd.read_csv(
+                max_dive_file,
+                sep=";",
+                parse_dates=True,
+                index_col=0,
+                dayfirst=True,
+                nrows=10,
+            )
+            file_time = pd.Timestamp(df.index.max())
+            if pd.Timestamp(max_time + np.timedelta64(10, "m")) > file_time:
+                _log.info(f"No new {platform_serial} M{mission} input files")
+                continue
+        except:
+            _log.info(f"failed time check on {max_dive_file}")
+        proc_one(platform_serial, mission, 'nrt')
+    _log.info("Finished nrt processing")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate ERDDAP dataset xml and rebuild datasets.xml")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    # Parser for processing all nrt or delayed data
     all_parser = subparsers.add_parser("all", help="process OG1 datasets older than a number of days (proc_pyglider_og1)")
     all_parser.add_argument("--kind", choices=["nrt", "delayed"], default="nrt",
                             help="type of dataset to process (default: nrt)")
     all_parser.add_argument("--days", type=int, default=7,
                             help="skip datasets processed within this many days (default: 3)")
 
+    # Parser for processing one mission
+
     one_parser = subparsers.add_parser("one", help="process one OG1 dataset (proc_pyglider_og1)")
     one_parser.add_argument("--kind", choices=["nrt", "delayed"], default="nrt",
                             help="type of dataset to process (default: nrt)")
     one_parser.add_argument("glider", type=str, help="glider serial")
     one_parser.add_argument("mission", type=int, help="glider mission")
+
+    # Parser for cron driven nrt processing
+    subparsers.add_parser("pipeline", help="process fresh nrt data, run as pipeline")
+
 
 
     args = parser.parse_args()
@@ -224,6 +279,8 @@ def main():
         if len(glider) < 3:
             glider = f"SEA{str(glider).zfill(3)}"
         proc_one(glider, args.mission, args.kind)
+    elif args.command == "pipeline":
+        process_new_nrt()
 
 
 if __name__ == "__main__":
