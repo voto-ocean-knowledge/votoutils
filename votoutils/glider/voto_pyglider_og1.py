@@ -108,7 +108,7 @@ def add_voto_stuff(outname):
     database.update_processed_time(mission_id, datetime.datetime.now())
 
 
-def proc_one():
+def proc_one(glider, mission, kind):
     logf = "/data/log/pyglider_og1.log"
     logging.basicConfig(
         filename=logf,
@@ -117,9 +117,6 @@ def proc_one():
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    glider="SHW002"
-    mission = 26
-    kind='raw'
     if kind =='raw':
         nc_out = proc_pyglider_og1(f"/data/data_raw/complete_mission/{glider}/M{mission}/",
                                    f"/data/data_l0_pyglider/OG_delayed/{glider}/M{mission}/",
@@ -202,18 +199,32 @@ def proc_all(kind='nrt', days=7):
         database.update_processed_time(mission_id, datetime.datetime.now())
 
 
-if __name__ == "__main__":
-    proc_one()
-    #add_voto_stuff("/data/data_l0_pyglider/OG_nrt/SEA069/M48/timeseries/mission_timeseries_VOTO.nc")
-    #proc_all()
-
 def main():
-    parser = argparse.ArgumentParser(description="Process glider data to OG1")
+    parser = argparse.ArgumentParser(description="Generate ERDDAP dataset xml and rebuild datasets.xml")
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
-    parser.add_argument("--kind", choices=["nrt", "delayed"], default="nrt",
+    all_parser = subparsers.add_parser("all", help="process OG1 datasets older than a number of days (proc_pyglider_og1)")
+    all_parser.add_argument("--kind", choices=["nrt", "delayed"], default="nrt",
                             help="type of dataset to process (default: nrt)")
-    parser.add_argument("--days", type=int, default=7,
-                            help="skip datasets processed within this many days (default: 7)")
+    all_parser.add_argument("--days", type=int, default=7,
+                            help="skip datasets processed within this many days (default: 3)")
+
+    one_parser = subparsers.add_parser("one", help="process one OG1 dataset (proc_pyglider_og1)")
+    one_parser.add_argument("--kind", choices=["nrt", "delayed"], default="nrt",
+                            help="type of dataset to process (default: nrt)")
+    one_parser.add_argument("glider", type=str, help="glider serial")
+    one_parser.add_argument("mission", type=int, help="glider mission")
+
+
     args = parser.parse_args()
-    if args.command == "og1":
+    if args.command == "all":
         proc_all(kind=args.kind, days=args.days)
+    elif args.command == "one":
+        glider = args.glider
+        if len(glider) < 3:
+            glider = f"SEA{str(glider).zfill(3)}"
+        proc_one(glider, args.mission, args.kind)
+
+
+if __name__ == "__main__":
+    main()
