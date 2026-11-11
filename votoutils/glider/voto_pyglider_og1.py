@@ -5,6 +5,7 @@ import xarray as xr
 import logging
 from pathlib import Path
 import subprocess
+import argparse
 from votoutils.upload.sync_functions import sync_script_dir
 from votoutils.glider.process_pyglider_og1 import proc_pyglider_og1
 from votoutils.glider.post_process_dataset import post_process, remove_gps_jammed_cycles
@@ -147,8 +148,8 @@ def proc_one():
         ],
     )
 
-def proc_all(kind='nrt'):
-    cutoff = datetime.datetime.now() - datetime.timedelta(days=7)
+def proc_all(kind='nrt', days=7):
+    cutoff = datetime.datetime.now() - datetime.timedelta(days=days)
     logf = f"/data/log/{kind}_pyglider_og1.log"
     logging.basicConfig(
         filename=logf,
@@ -205,3 +206,14 @@ if __name__ == "__main__":
     proc_one()
     #add_voto_stuff("/data/data_l0_pyglider/OG_nrt/SEA069/M48/timeseries/mission_timeseries_VOTO.nc")
     #proc_all()
+
+def main():
+    parser = argparse.ArgumentParser(description="Process glider data to OG1")
+
+    parser.add_argument("--kind", choices=["nrt", "delayed"], default="nrt",
+                            help="type of dataset to process (default: nrt)")
+    parser.add_argument("--days", type=int, default=7,
+                            help="skip datasets processed within this many days (default: 7)")
+    args = parser.parse_args()
+    if args.command == "og1":
+        proc_all(kind=args.kind, days=args.days)
